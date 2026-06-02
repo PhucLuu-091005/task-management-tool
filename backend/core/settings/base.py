@@ -1,5 +1,6 @@
 from pathlib import Path
 from decouple import config
+from datetime import timedelta
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -22,6 +23,8 @@ DEFAULT_APPS = [
 THIRD_PARTY_APPS = [
 	'rest_framework',
 	'corsheaders',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
 ]
 
 LOCAL_APPS = [
@@ -104,8 +107,16 @@ REST_FRAMEWORK = {
 		'rest_framework_simplejwt.authentication.JWTAuthentication',
 	),
 	'DEFAULT_PERMISSION_CLASSES' : (
-		'rest_framework_permissions.IsAuthenticated',
+		'rest_framework.permissions.IsAuthenticated',
 	),
 }
 
 CORS_ALLOW_ORIGINS = config('CORS_ALLOW_ORIGINS', default='localhost').split(',')
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
