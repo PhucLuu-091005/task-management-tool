@@ -2,6 +2,8 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 
+from apps.teams.models import Team, TeamMembership
+
 User = get_user_model()
 
 
@@ -37,3 +39,15 @@ def test_username_must_be_unique(user):
 @pytest.mark.django_db
 def test_new_user_is_not_admin_by_default(user):
     assert user.is_admin is False
+
+
+@pytest.mark.django_db
+def test_with_memberships_prefetches_team(user, django_assert_num_queries):
+    team = Team.objects.create(name="Alpha")
+    TeamMembership.objects.create(user=user, team=team, role=TeamMembership.Role.MEMBER)
+
+    fetched = User.objects.with_memberships().get(pk=user.pk)
+    # team is prefetched + select_related, so reading team.name does no extra query
+    with django_assert_num_queries(0):
+        names = [m.team.name for m in fetched.memberships.all()]
+    assert names == ["Alpha"]

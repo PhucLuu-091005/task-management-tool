@@ -1,6 +1,8 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+from apps.users.managers import UserManager
+
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)
@@ -9,6 +11,9 @@ class User(AbstractUser):
     teams = models.ManyToManyField(
         "teams.Team", through="teams.TeamMembership", related_name="members"
     )
+    is_admin = models.BooleanField(default=False)
+
+    objects = UserManager()
 
     USERNAME_FIELD = "username"
     REQUIRED_FIELDS = ["email"]
