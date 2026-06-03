@@ -18,8 +18,29 @@ dev = [
     "factory-boy>=3.3.3",
     "pytest>=9.0.3",
     "pytest-django>=4.12.0",
+    "ruff>=0.15.15",
 ]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "core.settings.development"
 python_files = ["test_*.py"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+# Auto-generated migrations are not hand-maintained; don't lint/format them.
+extend-exclude = ["**/migrations/**"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort (import ordering)
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "DJ",  # flake8-django
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Split-settings modules intentionally use `from .base import *`.
+"core/settings/*" = ["F403", "F405"]
