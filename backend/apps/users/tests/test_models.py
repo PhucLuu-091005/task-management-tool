@@ -29,3 +29,11 @@ def test_username_must_be_unique(user):
             username=user.username,
             password="random123214@",
         )
+
+
+# Global admin flag (A3)
+
+
+@pytest.mark.django_db
+def test_new_user_is_not_admin_by_default(user):
+    assert user.is_admin is False
