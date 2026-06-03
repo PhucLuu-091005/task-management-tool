@@ -8,6 +8,11 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.serializers import UserSerializer, RegisterSerializer
+from apps.users.constants import (
+    TOKEN_INVALID_ERROR_MESSAGE, 
+    MISSING_REFRESH_TOKEN_ERROR_MESSAGE
+)
+
 
 User = get_user_model()
 
@@ -38,11 +43,11 @@ class LogoutView(APIView):
             return Response(status = status.HTTP_205_RESET_CONTENT)
         except KeyError:
             return Response(
-                {'refresh': 'This field is required'},
+                {'refresh': MISSING_REFRESH_TOKEN_ERROR_MESSAGE},
                 status = status.HTTP_400_BAD_REQUEST
             )
         except TokenError:
             return Response(
-                {'refresh': 'Token expired or invalid'},
+                {'refresh': TOKEN_INVALID_ERROR_MESSAGE},
                 status = status.HTTP_400_BAD_REQUEST
             )
