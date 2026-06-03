@@ -54,10 +54,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     
     def validate(self, data: dict) -> dict:
         password = data.pop('password')
+        # Build an unsaved User so UserAttributeSimilarityValidator can compare
+        # the password against username/email/etc.
+        user = User(**data)
         try:
             validate_password(
                 password = password,
-                **data
+                user = user,
             )
         except DjangoValidationError as exc:
             # Make a dict so form binds as field error
