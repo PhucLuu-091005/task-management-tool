@@ -131,6 +131,27 @@ docker compose up --build
 
 Biến môi trường chính (`.env`): `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `EMAIL_HOST`/`EMAIL_*` (nếu bật thông báo), `NEXT_PUBLIC_API_URL`.
 
+## 8.1. Chất lượng code — Ruff & pre-commit
+
+Dự án dùng **Ruff** để lint + format (cấu hình ở `backend/pyproject.toml`). CI chạy
+`ruff check` và `ruff format --check` trên mỗi push/PR.
+
+Để bắt lỗi lint/format **trước khi commit** (cùng bộ rule với CI), cài pre-commit hook:
+
+```bash
+# Cài pre-commit (host) — chọn 1 cách
+uv tool install pre-commit        # hoặc: pipx install pre-commit / brew install pre-commit
+
+# Kích hoạt hook trong repo (đọc .pre-commit-config.yaml)
+pre-commit install
+
+# (tùy chọn) chạy thử trên toàn bộ file
+pre-commit run --all-files
+```
+
+Sau khi `pre-commit install`, mỗi lần `git commit` sẽ tự chạy Ruff (`ruff-check --fix` +
+`ruff-format`); nếu hook sửa file, commit bị chặn để bạn `git add` lại rồi commit tiếp.
+
 ## 9. Tiêu chí hoàn thành (Definition of Done)
 
 - [ ] CRUD đầy đủ cho Task và User.
