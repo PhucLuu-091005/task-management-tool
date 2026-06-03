@@ -1,4 +1,5 @@
 import pytest
+from django.db import IntegrityError
 
 from apps.teams.models import Team
 
@@ -20,3 +21,10 @@ def test_team_has_timestamps():
     team = Team.objects.create(name="Team Gamma")
     assert team.created_at is not None
     assert team.updated_at is not None
+
+
+@pytest.mark.django_db
+def test_team_name_must_be_unique():
+    Team.objects.create(name="Team Alpha")
+    with pytest.raises(IntegrityError):
+        Team.objects.create(name="Team Alpha")
