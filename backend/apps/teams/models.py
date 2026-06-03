@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -9,3 +10,24 @@ class Team(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class TeamMembership(models.Model):
+    class Role(models.TextChoices):
+        LEADER = "leader", "Leader"
+        MEMBER = "member", "Member"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="memberships"
+    )
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="memberships")
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.MEMBER)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "team"], name="unique_user_team"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user} · {self.team} ({self.role})"
