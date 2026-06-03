@@ -9,7 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.serializers import UserSerializer, RegisterSerializer
 
-User = get_user_model
+User = get_user_model()
 
 class RegisterView(CreateAPIView):
     serializer_class = RegisterSerializer
@@ -23,7 +23,7 @@ class RegisterView(CreateAPIView):
     
 class ProfileView(APIView):
     serializer_class = UserSerializer
-    permisison_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
         return Response(UserSerializer(request.user).data, status = status.HTTP_200_OK)

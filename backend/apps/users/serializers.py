@@ -61,7 +61,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             )
         except DjangoValidationError as exc:
             # Make a dict so form binds as field error
-            raise serializers.ValidationErrors({
+            raise serializers.ValidationError({
                 'password': list(exc.messages)
             })
         data['password'] = password
