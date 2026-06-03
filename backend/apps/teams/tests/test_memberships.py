@@ -45,6 +45,4 @@ def test_user_can_lead_one_team_and_be_member_of_another(member_user):
 def test_user_team_pair_is_unique(team, member_user):
     TeamMembership.objects.create(user=member_user, team=team, role=TeamMembership.Role.MEMBER)
     with pytest.raises(IntegrityError):
-        TeamMembership.objects.create(
-            user=member_user, team=team, role=TeamMembership.Role.LEADER
-        )
+        TeamMembership.objects.create(user=member_user, team=team, role=TeamMembership.Role.LEADER)

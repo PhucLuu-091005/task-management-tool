@@ -122,7 +122,15 @@ def test_missing_field(valid_regis_payload, miss_field):
 def test_user_serializer_output_hides_password(user):
     data = UserSerializer(user).data
     assert "password" not in data
-    assert set(data.keys()) == {"id", "email", "username", "first_name", "last_name"}
+    assert set(data.keys()) == {
+        "id",
+        "email",
+        "username",
+        "first_name",
+        "last_name",
+        "is_admin",
+        "memberships",
+    }
 
 
 # is_admin + team memberships exposed in the user API (A3)
@@ -139,6 +147,4 @@ def test_user_serializer_lists_team_memberships(user):
     team = Team.objects.create(name="Alpha")
     TeamMembership.objects.create(user=user, team=team, role=TeamMembership.Role.LEADER)
     data = UserSerializer(user).data
-    assert data["memberships"] == [
-        {"team": team.id, "team_name": "Alpha", "role": "leader"}
-    ]
+    assert data["memberships"] == [{"team": team.id, "team_name": "Alpha", "role": "leader"}]

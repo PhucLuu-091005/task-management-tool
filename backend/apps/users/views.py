@@ -29,7 +29,8 @@ class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
+        user = User.objects.with_memberships().get(pk=request.user.pk)
+        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
 
 
 class LogoutView(APIView):
