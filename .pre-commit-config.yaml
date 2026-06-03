@@ -1,0 +1,15 @@
+# Local pre-commit hooks — run Ruff (lint + format) before every commit.
+# Mirrors the CI lint gate so issues are fixed locally, not in CI.
+#
+# One-time setup (host):
+#   uv tool install pre-commit      # or: pipx install pre-commit / brew install pre-commit
+#   pre-commit install
+#
+# Ruff version is pinned to match the project dev dependency (pyproject.toml).
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.15
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
