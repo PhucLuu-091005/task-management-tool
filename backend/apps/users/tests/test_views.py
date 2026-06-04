@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.teams.models import Team, TeamMembership
+
 User = get_user_model()
 
 # Register
@@ -47,6 +49,22 @@ def test_profile_return_valid_user(auth_client, profile_url, user):
 def test_profile_return_401_for_unauthenticated_user(api_client, profile_url):
     res = api_client.get(profile_url)
     assert res.status_code == 401
+
+
+@pytest.mark.django_db
+def test_profile_avoids_n_plus_1_for_memberships(
+    auth_client, profile_url, user, django_assert_max_num_queries
+):
+    for i in range(10):
+        team = Team.objects.create(name=f"Team {i}")
+        TeamMembership.objects.create(user=user, team=team, role=TeamMembership.Role.MEMBER)
+
+    # Query count must stay flat regardless of how many memberships the user has.
+    with django_assert_max_num_queries(4):
+        res = auth_client.get(profile_url)
+
+    assert res.status_code == 200
+    assert len(res.data["memberships"]) == 10
 
 
 # Logout test

@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+from django.db.models import prefetch_related_objects
 from rest_framework import status
 from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -8,9 +8,8 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.constants import MISSING_REFRESH_TOKEN_ERROR_MESSAGE, TOKEN_INVALID_ERROR_MESSAGE
+from apps.users.managers import MEMBERSHIPS_PREFETCH
 from apps.users.serializers import RegisterSerializer, UserSerializer
-
-User = get_user_model()
 
 
 class RegisterView(CreateAPIView):
@@ -21,6 +20,7 @@ class RegisterView(CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        prefetch_related_objects([user], MEMBERSHIPS_PREFETCH)
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
@@ -29,6 +29,7 @@ class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
+        prefetch_related_objects([request.user], MEMBERSHIPS_PREFETCH)
         return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
 
 

@@ -5,6 +5,7 @@ from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
+from apps.teams.serializers import TeamMembershipSerializer
 from apps.users.constants import (
     EMAIL_UNIQUE_ERROR_MESSAGE,
     USERNAME_CONTENT_ERROR_MESSAGE,
@@ -15,9 +16,20 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    memberships = TeamMembershipSerializer(many=True, read_only=True)
+
     class Meta:
         model = User
-        fields = ["id", "email", "username", "first_name", "last_name"]
+        fields = [
+            "id",
+            "email",
+            "username",
+            "first_name",
+            "last_name",
+            "is_admin",
+            "memberships",
+        ]
+        read_only_fields = ["is_admin"]
 
 
 class RegisterSerializer(serializers.ModelSerializer):
