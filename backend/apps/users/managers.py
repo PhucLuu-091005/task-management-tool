@@ -4,13 +4,17 @@ from django.db.models import Prefetch
 
 from apps.teams.models import TeamMembership
 
+# Single source of truth for the memberships+team prefetch shape. Reused by
+# UserQuerySet.with_memberships (lookup paths) and by views that already hold
+# a User instance via prefetch_related_objects (e.g. ProfileView).
+MEMBERSHIPS_PREFETCH = Prefetch(
+    "memberships", queryset=TeamMembership.objects.select_related("team")
+)
+
 
 class UserQuerySet(models.QuerySet):
     def with_memberships(self):
-        # Prefetch memberships + their teams so serializing team names is N+1-free.
-        return self.prefetch_related(
-            Prefetch("memberships", queryset=TeamMembership.objects.select_related("team"))
-        )
+        return self.prefetch_related(MEMBERSHIPS_PREFETCH)
 
 
 # Inherit from DjangoUserManager to keep create_user/create_superuser, and use

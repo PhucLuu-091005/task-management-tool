@@ -8,6 +8,9 @@ class Team(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ["name"]
+
     def __str__(self) -> str:
         return self.name
 
@@ -25,9 +28,10 @@ class TeamMembership(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        ordering = ["team__name"]
         constraints = [
             models.UniqueConstraint(fields=["user", "team"], name="unique_user_team"),
         ]
 
     def __str__(self) -> str:
-        return f"{self.user} · {self.team} ({self.role})"
+        return f"{self.user} · {self.team} ({self.get_role_display()})"
