@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [master]
 
+env:
+  # GitHub is forcing Node-20 actions onto Node 24 (~2026-06-16); opt in now.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   lint:
     name: Ruff lint + format
@@ -69,5 +73,15 @@ jobs:
       - name: Install dependencies (incl. dev)
         run: uv sync --frozen
 
-      - name: Run pytest
-        run: uv run pytest -q
+      - name: Run pytest with coverage
+        run: uv run pytest -q --cov-report=html --cov-report=xml
+
+      - name: Publish coverage summary
+        run: uv run coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload HTML coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: backend/htmlcov
