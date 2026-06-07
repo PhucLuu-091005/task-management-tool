@@ -109,3 +109,13 @@ def test_team_member_allows_leader(make_request, plain_user, team):
 
 def test_team_member_denies_non_member(make_request, plain_user, team):
     assert IsTeamMember().has_object_permission(make_request(plain_user), None, team) is False
+
+
+# --- team resolution edge case ---
+
+
+def test_team_scoped_perms_deny_when_team_is_unresolvable(make_request, plain_user):
+    obj = object()
+    request = make_request(plain_user)
+    assert IsTeamLeader().has_object_permission(request, None, obj) is False
+    assert IsTeamMember().has_object_permission(request, None, obj) is False
