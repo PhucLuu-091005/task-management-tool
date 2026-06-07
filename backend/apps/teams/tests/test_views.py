@@ -140,3 +140,25 @@ def test_member_cannot_add_member(member_client, team, admin_user):
         format="json",
     )
     assert res.status_code == 403
+
+
+def test_member_cannot_change_member_role(member_client, team, member_user):
+    TeamMembership.objects.create(user=member_user, team=team, role=TeamMembership.Role.MEMBER)
+    res = member_client.patch(
+        reverse("team-member-detail", args=[team.id, member_user.id]),
+        {"role": "leader"},
+        format="json",
+    )
+    assert res.status_code == 403
+
+
+def test_member_cannot_remove_member(member_client, team, member_user):
+    TeamMembership.objects.create(user=member_user, team=team, role=TeamMembership.Role.MEMBER)
+    res = member_client.delete(reverse("team-member-detail", args=[team.id, member_user.id]))
+    assert res.status_code == 403
+
+
+def test_member_detail_requires_auth(api_client, team, member_user):
+    TeamMembership.objects.create(user=member_user, team=team, role=TeamMembership.Role.MEMBER)
+    res = api_client.delete(reverse("team-member-detail", args=[team.id, member_user.id]))
+    assert res.status_code == 401
