@@ -1,5 +1,9 @@
 """RBAC permissions. Single-responsibility and composable: admin's "access all"
-is expressed per-view via ``IsAdmin | IsTeamLeader``, not baked into each class."""
+is expressed per-view via ``IsAdmin | IsTeamLeader``, not baked into each class.
+
+The team-scoped classes decide at the object level; view-level they only check
+authentication, so a consumer must filter the queryset (list) and add an explicit
+guard such as ``IsAdmin`` for create — these classes don't secure those alone."""
 
 from rest_framework.permissions import BasePermission
 
