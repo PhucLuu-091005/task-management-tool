@@ -91,6 +91,37 @@ def test_logout_requires_auth(api_client, logout_url):
     assert res.status_code == 401
 
 
+# User list (admin)
+
+
+@pytest.mark.django_db
+def test_admin_lists_users_with_memberships(
+    admin_client, admin_user, user, user_list_url, django_assert_max_num_queries
+):
+    for i in range(5):
+        team = Team.objects.create(name=f"T{i}")
+        TeamMembership.objects.create(user=user, team=team, role=TeamMembership.Role.MEMBER)
+
+    with django_assert_max_num_queries(5):
+        res = admin_client.get(user_list_url)
+
+    assert res.status_code == 200
+    assert {admin_user.id, user.id} <= {u["id"] for u in res.data}
+    target = next(u for u in res.data if u["id"] == user.id)
+    assert len(target["memberships"]) == 5
+
+
+@pytest.mark.django_db
+def test_user_list_requires_admin(auth_client, user_list_url):
+    res = auth_client.get(user_list_url)
+    assert res.status_code == 403
+
+
+def test_user_list_requires_auth(api_client, user_list_url):
+    res = api_client.get(user_list_url)
+    assert res.status_code == 401
+
+
 # Full auth flow
 
 
