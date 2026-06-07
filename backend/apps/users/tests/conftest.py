@@ -36,6 +36,24 @@ def auth_client(api_client, user):
 
 
 @pytest.fixture
+def admin_user(db):
+    return User.objects.create_user(
+        email="admin@example.com",
+        username="adminx",
+        password="Str0ng!Passw0rd",
+        first_name="Ad",
+        last_name="Min",
+        is_admin=True,
+    )
+
+
+@pytest.fixture
+def admin_client(api_client, admin_user):
+    api_client.force_authenticate(user=admin_user)
+    return api_client
+
+
+@pytest.fixture
 def valid_regis_payload():
     # A valid starting point so the later test can invalidate on field and test
     return {
@@ -68,6 +86,11 @@ def logout_url():
 @pytest.fixture
 def login_url():
     return reverse("login")
+
+
+@pytest.fixture
+def user_list_url():
+    return reverse("user-list")
 
 
 # To check refresh token
