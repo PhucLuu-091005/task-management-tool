@@ -17,6 +17,7 @@ dependencies = [
 dev = [
     "factory-boy>=3.3.3",
     "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
     "pytest-django>=4.12.0",
     "ruff>=0.15.15",
 ]
@@ -24,6 +25,26 @@ dev = [
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "core.settings.development"
 python_files = ["test_*.py"]
+addopts = "--cov --cov-report=term-missing"
+
+[tool.coverage.run]
+branch = true
+source = ["apps", "core"]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "core/settings/*",
+    "core/asgi.py",
+    "core/wsgi.py",
+    "manage.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
 
 [tool.ruff]
 target-version = "py314"
