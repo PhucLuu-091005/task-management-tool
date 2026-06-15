@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.tasks.models import Task
 
@@ -73,7 +76,7 @@ def test_create_ignores_client_supplied_status_and_assignee(
 
 
 def test_member_lists_only_own_team_tasks(member_client, team, other_team, team_member):
-    mine = Task.objects.create(title="Mine", team=team, created_by=team_member)
+    Task.objects.create(title="Mine", team=team, created_by=team_member)
     Task.objects.create(title="Hidden", team=other_team, created_by=team_member)
     res = member_client.get(reverse("task-list"))
     assert res.status_code == 200
@@ -192,3 +195,102 @@ def test_detail_requires_auth(api_client, team, admin_user):
     task = Task.objects.create(title="Auth", team=team, created_by=admin_user)
     res = api_client.get(reverse("task-detail", args=[task.id]))
     assert res.status_code == 401
+
+
+# --- Filters & search ---
+
+
+def test_filter_by_status(member_client, team, team_member):
+    new_task = Task.objects.create(title="Fresh", team=team, created_by=team_member)
+    Task.objects.create(
+        title="Working",
+        team=team,
+        created_by=team_member,
+        status=Task.Status.IN_PROGRESS,
+    )
+    res = member_client.get(reverse("task-list"), {"status": Task.Status.NEW})
+    assert res.status_code == 200
+    titles = [t["title"] for t in res.data]
+    assert titles == ["Fresh"]
+    assert new_task.title in titles
+
+
+def test_filter_by_priority(member_client, team, team_member):
+    Task.objects.create(
+        title="Low one", team=team, created_by=team_member, priority=Task.Priority.LOW
+    )
+    Task.objects.create(
+        title="Urgent one",
+        team=team,
+        created_by=team_member,
+        priority=Task.Priority.URGENT,
+    )
+    res = member_client.get(reverse("task-list"), {"priority": Task.Priority.URGENT})
+    assert res.status_code == 200
+    assert [t["title"] for t in res.data] == ["Urgent one"]
+
+
+def test_filter_by_assignee(member_client, team, team_member, assignee):
+    Task.objects.create(
+        title="Assigned", team=team, created_by=team_member, assignee=assignee
+    )
+    Task.objects.create(title="Unassigned", team=team, created_by=team_member)
+    res = member_client.get(reverse("task-list"), {"assignee": assignee.id})
+    assert res.status_code == 200
+    assert [t["title"] for t in res.data] == ["Assigned"]
+
+
+def test_filter_is_overdue_true(member_client, team, team_member):
+    Task.objects.create(
+        title="Late",
+        team=team,
+        created_by=team_member,
+        due_date=timezone.now() - timedelta(hours=1),
+    )
+    Task.objects.create(
+        title="On time",
+        team=team,
+        created_by=team_member,
+        due_date=timezone.now() + timedelta(days=1),
+    )
+    res = member_client.get(reverse("task-list"), {"is_overdue": "true"})
+    assert res.status_code == 200
+    assert [t["title"] for t in res.data] == ["Late"]
+
+
+def test_filter_is_overdue_false(member_client, team, team_member):
+    Task.objects.create(
+        title="Late",
+        team=team,
+        created_by=team_member,
+        due_date=timezone.now() - timedelta(hours=1),
+    )
+    Task.objects.create(
+        title="On time",
+        team=team,
+        created_by=team_member,
+        due_date=timezone.now() + timedelta(days=1),
+    )
+    res = member_client.get(reverse("task-list"), {"is_overdue": "false"})
+    assert res.status_code == 200
+    titles = [t["title"] for t in res.data]
+    assert "On time" in titles
+    assert "Late" not in titles
+
+
+def test_search_by_title(member_client, team, team_member):
+    Task.objects.create(title="Refactor auth", team=team, created_by=team_member)
+    Task.objects.create(title="Write docs", team=team, created_by=team_member)
+    res = member_client.get(reverse("task-list"), {"search": "auth"})
+    assert res.status_code == 200
+    assert [t["title"] for t in res.data] == ["Refactor auth"]
+
+
+def test_invalid_priority_param_returns_400(member_client, team, team_member):
+    res = member_client.get(reverse("task-list"), {"priority": "abc"})
+    assert res.status_code == 400
+
+
+def test_invalid_assignee_param_returns_400(member_client, team, team_member):
+    res = member_client.get(reverse("task-list"), {"assignee": "notanint"})
+    assert res.status_code == 400
