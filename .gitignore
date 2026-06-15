@@ -15,6 +15,7 @@ CLAUDE.md
 
 # Local planning / progress tracking
 ROADMAP.md
+docs/superpowers/plans/
 
 # Local-only Claude Code skills (kept out of git and CI)
 .claude/skills/explain/
