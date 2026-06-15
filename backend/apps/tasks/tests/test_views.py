@@ -47,9 +47,7 @@ def test_outsider_cannot_create_task_in_team(outsider_client, team):
 
 
 def test_create_task_requires_auth(api_client, team):
-    res = api_client.post(
-        reverse("task-list"), {"title": "X", "team": team.id}, format="json"
-    )
+    res = api_client.post(reverse("task-list"), {"title": "X", "team": team.id}, format="json")
     assert res.status_code == 401
 
 
@@ -231,9 +229,7 @@ def test_filter_by_priority(member_client, team, team_member):
 
 
 def test_filter_by_assignee(member_client, team, team_member, assignee):
-    Task.objects.create(
-        title="Assigned", team=team, created_by=team_member, assignee=assignee
-    )
+    Task.objects.create(title="Assigned", team=team, created_by=team_member, assignee=assignee)
     Task.objects.create(title="Unassigned", team=team, created_by=team_member)
     res = member_client.get(reverse("task-list"), {"assignee": assignee.id})
     assert res.status_code == 200

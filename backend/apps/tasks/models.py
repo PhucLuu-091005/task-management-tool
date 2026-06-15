@@ -23,9 +23,7 @@ class Task(models.Model):
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.NEW
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.NEW)
     priority = models.PositiveSmallIntegerField(
         choices=Priority.choices, default=Priority.NONE, db_index=True
     )
@@ -48,9 +46,7 @@ class Task(models.Model):
         on_delete=models.PROTECT,
         related_name="created_tasks",
     )
-    team = models.ForeignKey(
-        "teams.Team", on_delete=models.CASCADE, related_name="tasks"
-    )
+    team = models.ForeignKey("teams.Team", on_delete=models.CASCADE, related_name="tasks")
     due_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -64,7 +60,5 @@ class Task(models.Model):
     @property
     def is_overdue(self) -> bool:
         return bool(
-            self.due_date
-            and self.due_date < timezone.now()
-            and self.status != self.Status.DONE
+            self.due_date and self.due_date < timezone.now() and self.status != self.Status.DONE
         )

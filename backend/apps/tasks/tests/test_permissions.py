@@ -41,9 +41,7 @@ def test_creator_can_edit_own_task(make_request, team, creator):
 
 
 def test_leader_of_team_can_edit_task(make_request, team, creator, leader_user):
-    TeamMembership.objects.create(
-        user=leader_user, team=team, role=TeamMembership.Role.LEADER
-    )
+    TeamMembership.objects.create(user=leader_user, team=team, role=TeamMembership.Role.LEADER)
     task = Task.objects.create(title="Lead", team=team, created_by=creator)
     assert CanEditTask().has_object_permission(make_request(leader_user), None, task) is True
 
@@ -54,9 +52,7 @@ def test_admin_can_edit_any_task(make_request, team, creator, admin_user):
 
 
 def test_plain_member_cannot_edit_others_task(make_request, team, creator, member_user):
-    TeamMembership.objects.create(
-        user=member_user, team=team, role=TeamMembership.Role.MEMBER
-    )
+    TeamMembership.objects.create(user=member_user, team=team, role=TeamMembership.Role.MEMBER)
     task = Task.objects.create(title="Theirs", team=team, created_by=creator)
     assert CanEditTask().has_object_permission(make_request(member_user), None, task) is False
 
@@ -68,10 +64,7 @@ def test_outsider_cannot_edit_task(make_request, team, creator, outsider_user):
 
 def test_anonymous_cannot_edit_task(make_request, team, creator):
     task = Task.objects.create(title="Anon", team=team, created_by=creator)
-    assert (
-        CanEditTask().has_object_permission(make_request(AnonymousUser()), None, task)
-        is False
-    )
+    assert CanEditTask().has_object_permission(make_request(AnonymousUser()), None, task) is False
 
 
 # --- visible_tasks (shared team board scoping) ---
@@ -86,9 +79,7 @@ def test_admin_sees_all_tasks(team, other_team, creator, admin_user):
 
 
 def test_member_sees_only_own_team_tasks(team, other_team, creator, member_user):
-    TeamMembership.objects.create(
-        user=member_user, team=team, role=TeamMembership.Role.MEMBER
-    )
+    TeamMembership.objects.create(user=member_user, team=team, role=TeamMembership.Role.MEMBER)
     mine = Task.objects.create(title="Mine", team=team, created_by=creator)
     hidden = Task.objects.create(title="Hidden", team=other_team, created_by=creator)
     visible = visible_tasks(member_user)

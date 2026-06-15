@@ -69,9 +69,7 @@ def test_estimate_hours_accepts_decimal(team, creator):
 
 
 def test_estimate_hours_rejects_below_minimum(team, creator):
-    task = Task(
-        title="Too small", team=team, created_by=creator, estimate_hours=Decimal("0.00")
-    )
+    task = Task(title="Too small", team=team, created_by=creator, estimate_hours=Decimal("0.00"))
     with pytest.raises(ValidationError):
         task.full_clean()
 
@@ -87,9 +85,7 @@ def test_due_date_is_optional(team, creator):
 
 
 def test_assignee_reverse_relation_resolves(team, creator, assignee):
-    task = Task.objects.create(
-        title="Assigned", team=team, created_by=creator, assignee=assignee
-    )
+    task = Task.objects.create(title="Assigned", team=team, created_by=creator, assignee=assignee)
     assert task.assignee == assignee
     assert task in assignee.assigned_tasks.all()
 

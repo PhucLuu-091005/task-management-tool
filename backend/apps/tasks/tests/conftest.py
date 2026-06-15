@@ -69,17 +69,13 @@ def outsider_user(db):
 
 @pytest.fixture
 def team_member(team, member_user):
-    TeamMembership.objects.create(
-        user=member_user, team=team, role=TeamMembership.Role.MEMBER
-    )
+    TeamMembership.objects.create(user=member_user, team=team, role=TeamMembership.Role.MEMBER)
     return member_user
 
 
 @pytest.fixture
 def team_leader(team, leader_user):
-    TeamMembership.objects.create(
-        user=leader_user, team=team, role=TeamMembership.Role.LEADER
-    )
+    TeamMembership.objects.create(user=leader_user, team=team, role=TeamMembership.Role.LEADER)
     return leader_user
 
 

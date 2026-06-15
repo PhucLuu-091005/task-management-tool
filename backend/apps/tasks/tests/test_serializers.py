@@ -24,9 +24,7 @@ def make_context():
 
 
 def test_member_can_create_task_in_own_team(make_context, team, member_user):
-    TeamMembership.objects.create(
-        user=member_user, team=team, role=TeamMembership.Role.MEMBER
-    )
+    TeamMembership.objects.create(user=member_user, team=team, role=TeamMembership.Role.MEMBER)
     serializer = TaskSerializer(
         data={"title": "Do it", "team": team.id}, context=make_context(member_user)
     )
@@ -34,9 +32,7 @@ def test_member_can_create_task_in_own_team(make_context, team, member_user):
 
 
 def test_leader_can_create_task_in_own_team(make_context, team, leader_user):
-    TeamMembership.objects.create(
-        user=leader_user, team=team, role=TeamMembership.Role.LEADER
-    )
+    TeamMembership.objects.create(user=leader_user, team=team, role=TeamMembership.Role.LEADER)
     serializer = TaskSerializer(
         data={"title": "Lead it", "team": team.id}, context=make_context(leader_user)
     )
@@ -62,9 +58,7 @@ def test_non_member_cannot_create_task_in_team(make_context, team, outsider_user
 
 
 def test_writable_descriptive_fields_round_trip(make_context, team, member_user):
-    TeamMembership.objects.create(
-        user=member_user, team=team, role=TeamMembership.Role.MEMBER
-    )
+    TeamMembership.objects.create(user=member_user, team=team, role=TeamMembership.Role.MEMBER)
     serializer = TaskSerializer(
         data={
             "title": "Full",
@@ -83,9 +77,7 @@ def test_writable_descriptive_fields_round_trip(make_context, team, member_user)
 
 
 def test_status_assignee_created_by_are_read_only(make_context, team, member_user, assignee):
-    TeamMembership.objects.create(
-        user=member_user, team=team, role=TeamMembership.Role.MEMBER
-    )
+    TeamMembership.objects.create(user=member_user, team=team, role=TeamMembership.Role.MEMBER)
     serializer = TaskSerializer(
         data={
             "title": "Try to cheat",
