@@ -17,10 +17,8 @@ def _validated_int(params, field):
         return None
     try:
         return int(value)
-    except (TypeError, ValueError):
-        raise ValidationError(
-            INVALID_FILTER_VALUE_ERROR_MESSAGE.format(field=field)
-        ) from None
+    except TypeError, ValueError:
+        raise ValidationError(INVALID_FILTER_VALUE_ERROR_MESSAGE.format(field=field)) from None
 
 
 class TaskListCreateView(generics.ListCreateAPIView):
