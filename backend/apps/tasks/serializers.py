@@ -37,18 +37,36 @@ class TaskSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "status", "created_by", "created_at", "updated_at"]
 
     def validate(self, data: dict) -> dict:
-        assignee_type = data.get("assignee_type")
+        instance = self.instance
+
+        if "assignee_type" in data:
+            assignee_type = data["assignee_type"]
+        elif instance is not None:
+            assignee_type = instance.assignee_type
+        else:
+            assignee_type = None
+
         if assignee_type not in _ASSIGNEE_FIELDS:
             return data
+
         expected_field = _ASSIGNEE_FIELDS[assignee_type]
         for field in _ASSIGNEE_FIELDS.values():
-            value = data.get(field)
-            if field == expected_field and value is None:
-                raise serializers.ValidationError(
-                    {field: ASSIGNEE_REQUIRED_ERROR_MESSAGE.format(type=assignee_type)}
+            if field == expected_field:
+                effective = (
+                    data[field]
+                    if field in data
+                    else (getattr(instance, field) if instance is not None else None)
                 )
-            if field != expected_field and value is not None:
-                raise serializers.ValidationError(
-                    {field: ASSIGNEE_MISMATCH_ERROR_MESSAGE.format(type=assignee_type)}
-                )
+                if effective is None:
+                    raise serializers.ValidationError(
+                        {field: ASSIGNEE_REQUIRED_ERROR_MESSAGE.format(type=assignee_type)}
+                    )
+            else:
+                # client explicitly set a non-matching assignee -> mismatch
+                if data.get(field) is not None:
+                    raise serializers.ValidationError(
+                        {field: ASSIGNEE_MISMATCH_ERROR_MESSAGE.format(type=assignee_type)}
+                    )
+                # force-null any stale value so the persisted state stays consistent
+                data[field] = None
         return data
