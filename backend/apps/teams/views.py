@@ -4,8 +4,9 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
 
-from apps.teams.models import Team, TeamMembership
+from apps.teams.models import Department, Team, TeamMembership
 from apps.teams.serializers import (
+    DepartmentSerializer,
     TeamMemberRoleSerializer,
     TeamMemberSerializer,
     TeamSerializer,
@@ -57,3 +58,15 @@ class TeamMemberDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
         self.check_object_permissions(self.request, membership)
         return membership
+
+
+class DepartmentListCreateView(generics.ListCreateAPIView):
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
+    permission_classes = [IsAdmin]
+
+
+class DepartmentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
+    permission_classes = [IsAdmin]
