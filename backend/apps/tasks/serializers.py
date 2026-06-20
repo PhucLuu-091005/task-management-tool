@@ -38,6 +38,8 @@ class TaskSerializer(serializers.ModelSerializer):
 
     def validate(self, data: dict) -> dict:
         assignee_type = data.get("assignee_type")
+        if assignee_type not in _ASSIGNEE_FIELDS:
+            return data
         expected_field = _ASSIGNEE_FIELDS[assignee_type]
         for field in _ASSIGNEE_FIELDS.values():
             value = data.get(field)
