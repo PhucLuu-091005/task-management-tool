@@ -9,14 +9,22 @@ pytestmark = pytest.mark.django_db
 # --- Team CRUD ---
 
 
-def test_admin_creates_team_and_becomes_leader(admin_client, admin_user):
+def test_admin_creates_team_and_becomes_leader(admin_client, admin_user, department):
     res = admin_client.post(
-        reverse("team-list"), {"name": "Engineering", "description": "Eng"}, format="json"
+        reverse("team-list"),
+        {"name": "Engineering", "description": "Eng", "department": department.id},
+        format="json",
     )
     assert res.status_code == 201
     team = Team.objects.get(name="Engineering")
     membership = TeamMembership.objects.get(user=admin_user, team=team)
     assert membership.role == TeamMembership.Role.LEADER
+
+
+def test_create_team_requires_department(admin_client):
+    res = admin_client.post(reverse("team-list"), {"name": "NoDept"}, format="json")
+    assert res.status_code == 400
+    assert "department" in res.data
 
 
 def test_create_team_requires_admin(member_client):

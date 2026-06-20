@@ -2,7 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
-from apps.teams.models import Team
+from apps.teams.models import Department, Team
 
 User = get_user_model()
 
@@ -42,5 +42,10 @@ def member_client(api_client, member_user):
 
 
 @pytest.fixture
-def team(db):
-    return Team.objects.create(name="Alpha")
+def department(db):
+    return Department.objects.create(name="Engineering")
+
+
+@pytest.fixture
+def team(db, department):
+    return Team.objects.create(name="Alpha", department=department)
