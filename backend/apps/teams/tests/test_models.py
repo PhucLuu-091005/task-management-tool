@@ -6,28 +6,40 @@ from apps.teams.models import Department, Team
 
 @pytest.mark.django_db
 def test_team_str_returns_name():
-    team = Team.objects.create(name="Team Alpha")
+    dept = Department.objects.create(name="D1")
+    team = Team.objects.create(name="Team Alpha", department=dept)
     assert str(team) == "Team Alpha"
 
 
 @pytest.mark.django_db
 def test_team_created_with_optional_description():
-    team = Team.objects.create(name="Team Beta", description="Backend squad")
+    dept = Department.objects.create(name="D2")
+    team = Team.objects.create(name="Team Beta", description="Backend squad", department=dept)
     assert team.description == "Backend squad"
 
 
 @pytest.mark.django_db
 def test_team_has_timestamps():
-    team = Team.objects.create(name="Team Gamma")
+    dept = Department.objects.create(name="D3")
+    team = Team.objects.create(name="Team Gamma", department=dept)
     assert team.created_at is not None
     assert team.updated_at is not None
 
 
 @pytest.mark.django_db
 def test_team_name_must_be_unique():
-    Team.objects.create(name="Team Alpha")
+    dept = Department.objects.create(name="D4")
+    Team.objects.create(name="Team Alpha", department=dept)
     with pytest.raises(IntegrityError):
-        Team.objects.create(name="Team Alpha")
+        Team.objects.create(name="Team Alpha", department=dept)
+
+
+@pytest.mark.django_db
+def test_team_belongs_to_department():
+    dept = Department.objects.create(name="Platform Dept")
+    team = Team.objects.create(name="Platform", department=dept)
+    assert team.department == dept
+    assert list(dept.teams.all()) == [team]
 
 
 @pytest.mark.django_db
