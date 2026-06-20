@@ -142,9 +142,10 @@ def test_user_serializer_includes_is_admin(user):
 
 
 def test_user_serializer_lists_team_memberships(user):
-    from apps.teams.models import Team, TeamMembership
+    from apps.teams.models import Department, Team, TeamMembership
 
-    team = Team.objects.create(name="Alpha")
+    dept = Department.objects.create(name="Dept Serializer Alpha")
+    team = Team.objects.create(name="Alpha", department=dept)
     TeamMembership.objects.create(user=user, team=team, role=TeamMembership.Role.LEADER)
     data = UserSerializer(user).data
     assert data["memberships"] == [{"team": team.id, "team_name": "Alpha", "role": "leader"}]
