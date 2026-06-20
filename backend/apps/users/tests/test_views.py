@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.teams.models import Team, TeamMembership
+from apps.teams.models import Department, Team, TeamMembership
 
 User = get_user_model()
 
@@ -55,8 +55,9 @@ def test_profile_return_401_for_unauthenticated_user(api_client, profile_url):
 def test_profile_avoids_n_plus_1_for_memberships(
     auth_client, profile_url, user, django_assert_max_num_queries
 ):
+    dept = Department.objects.create(name="Dept Profile")
     for i in range(10):
-        team = Team.objects.create(name=f"Team {i}")
+        team = Team.objects.create(name=f"Team {i}", department=dept)
         TeamMembership.objects.create(user=user, team=team, role=TeamMembership.Role.MEMBER)
 
     # Query count must stay flat regardless of how many memberships the user has.
@@ -98,8 +99,9 @@ def test_logout_requires_auth(api_client, logout_url):
 def test_admin_lists_users_with_memberships(
     admin_client, admin_user, user, user_list_url, django_assert_max_num_queries
 ):
+    dept = Department.objects.create(name="Dept Admin")
     for i in range(5):
-        team = Team.objects.create(name=f"T{i}")
+        team = Team.objects.create(name=f"T{i}", department=dept)
         TeamMembership.objects.create(user=user, team=team, role=TeamMembership.Role.MEMBER)
 
     with django_assert_max_num_queries(5):
