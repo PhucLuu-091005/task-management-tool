@@ -1,7 +1,7 @@
 import pytest
 from django.urls import reverse
 
-from apps.teams.models import Team, TeamMembership
+from apps.teams.models import Department, Team, TeamMembership
 
 pytestmark = pytest.mark.django_db
 
@@ -170,3 +170,32 @@ def test_member_detail_requires_auth(api_client, team, member_user):
     TeamMembership.objects.create(user=member_user, team=team, role=TeamMembership.Role.MEMBER)
     res = api_client.delete(reverse("team-member-detail", args=[team.id, member_user.id]))
     assert res.status_code == 401
+
+
+# --- Department CRUD ---
+
+
+def test_admin_creates_department(admin_client):
+    res = admin_client.post(
+        reverse("department-list"),
+        {"name": "Finance", "description": "Money"},
+        format="json",
+    )
+    assert res.status_code == 201
+    assert Department.objects.filter(name="Finance").exists()
+
+
+def test_member_cannot_create_department(member_client):
+    res = member_client.post(reverse("department-list"), {"name": "X"}, format="json")
+    assert res.status_code == 403
+
+
+def test_anonymous_cannot_list_departments(api_client):
+    res = api_client.get(reverse("department-list"))
+    assert res.status_code == 401
+
+
+def test_admin_deletes_department(admin_client, department):
+    res = admin_client.delete(reverse("department-detail", args=[department.id]))
+    assert res.status_code == 204
+    assert not Department.objects.filter(id=department.id).exists()

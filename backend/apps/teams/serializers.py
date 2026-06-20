@@ -2,7 +2,7 @@ from django.db import IntegrityError
 from rest_framework import serializers
 
 from apps.teams.constants import ALREADY_MEMBER_ERROR_MESSAGE
-from apps.teams.models import Team, TeamMembership
+from apps.teams.models import Department, Team, TeamMembership
 
 
 class TeamMembershipSerializer(serializers.ModelSerializer):
@@ -44,3 +44,10 @@ class TeamMemberRoleSerializer(serializers.ModelSerializer):
         model = TeamMembership
         fields = ["user", "role"]
         read_only_fields = ["user"]
+
+
+class DepartmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Department
+        fields = ["id", "name", "description", "lead", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
