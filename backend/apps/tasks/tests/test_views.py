@@ -77,3 +77,50 @@ def test_search_by_title(admin_client, creator, team):
 def test_invalid_assignee_user_filter_returns_400(admin_client):
     res = admin_client.get(reverse("task-list"), {"assignee_user": "abc"})
     assert res.status_code == 400
+
+
+def test_patch_change_type_nulls_stale_assignee(admin_client, creator, team, member_user):
+    task = _team_task(creator, team)
+    url = reverse("task-detail", args=[task.id])
+    res = admin_client.patch(
+        url,
+        {"assignee_type": "user", "assignee_user": member_user.id},
+        format="json",
+    )
+    assert res.status_code == 200
+    task.refresh_from_db()
+    assert task.assignee_type == Task.AssigneeType.USER
+    assert task.assignee_user_id == member_user.id
+    assert task.assignee_team_id is None
+
+
+def test_patch_add_mismatched_assignee_rejected(admin_client, creator, team, member_user):
+    task = _team_task(creator, team)
+    url = reverse("task-detail", args=[task.id])
+    res = admin_client.patch(
+        url,
+        {"assignee_user": member_user.id},
+        format="json",
+    )
+    assert res.status_code == 400
+
+
+def test_patch_change_type_without_new_assignee_rejected(admin_client, creator, team):
+    task = _team_task(creator, team)
+    url = reverse("task-detail", args=[task.id])
+    res = admin_client.patch(
+        url,
+        {"assignee_type": "user"},
+        format="json",
+    )
+    assert res.status_code == 400
+
+
+def test_patch_descriptive_only_keeps_assignee(admin_client, creator, team):
+    task = _team_task(creator, team)
+    url = reverse("task-detail", args=[task.id])
+    res = admin_client.patch(url, {"title": "Renamed"}, format="json")
+    assert res.status_code == 200
+    task.refresh_from_db()
+    assert task.title == "Renamed"
+    assert task.assignee_team_id == team.id
