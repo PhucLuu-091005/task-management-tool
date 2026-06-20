@@ -4,11 +4,12 @@
 
 ## 1. Tính năng chính
 
-1. **Quản lý danh sách công việc:** thêm, sửa, xoá, tìm kiếm, lọc theo trạng thái.
-2. **Giao việc** cho nhân sự phụ trách (assignee).
-3. **Cập nhật trạng thái:** Tạo mới → Đang xử lý → Hoàn thành → Quá hạn (tự động đánh dấu quá hạn theo deadline).
-4. **Quản lý người dùng theo role:** `admin`, `leader`, `member`.
-5. **Dashboard** thống kê số lượng công việc theo trạng thái / theo người phụ trách.
+1. **Cơ cấu tổ chức:** quản lý **Phòng ban → Nhóm → Nhân viên** — 3 thực thể lồng nhau trong 1 công ty.
+2. **Quản lý danh sách công việc:** thêm, sửa, xoá, tìm kiếm, lọc theo trạng thái.
+3. **Giao việc** cho **một cá nhân, một nhóm, hoặc một phòng ban**. Khi giao cho nhóm/phòng ban, hệ thống gửi thông báo tới **lãnh đạo (leader)** của nhóm/phòng ban đó.
+4. **Cập nhật trạng thái:** Tạo mới → Đang xử lý → Hoàn thành. Khi thời gian thực hiện vượt mốc `due_date` mà task chưa hoàn thành, **hệ thống tự động chuyển sang Quá hạn** (job định kỳ).
+5. **Quản lý người dùng theo role:** `admin`, `leader`, `member`.
+6. **Dashboard** thống kê số lượng công việc theo trạng thái / người phụ trách / nhóm / phòng ban.
 
 ### Điểm cộng (nice-to-have)
 - Gửi email/thông báo khi được giao việc.
@@ -23,7 +24,7 @@
 │  (frontend)  │  ◄─────────────────────── │  Framework   │ ◄─── │            │
 └──────────────┘        JWT auth           └──────────────┘      └────────────┘
         │                                          │
-        │                                          └──► Celery + Redis (email/thông báo - tùy chọn)
+        │                                          └──► Celery beat + Redis (job quá hạn định kỳ; email/thông báo)
         └──► Trình duyệt người dùng
 ```
 
@@ -45,14 +46,52 @@
 
 ## 4. Mô hình dữ liệu (data model)
 
+### Cơ cấu tổ chức: Phòng ban → Nhóm → Nhân viên
+
+> **Phạm vi:** ứng dụng phục vụ **một công ty** (single-tenant). "Công ty" là gốc ngầm định của
+> toàn hệ thống, *chưa* tách thành bảng riêng. Nếu sau cần nhiều công ty, thêm bảng `Company` đứng
+> trên `Department`. Ba thực thể **Phòng ban, Nhóm, Nhân viên** là **khác nhau** và lồng nhau:
+> `Department 1—* Team 1—* User` (nhân viên thuộc nhóm, nhóm thuộc phòng ban).
+
+#### Department (Phòng ban)
+| Trường | Kiểu | Ghi chú |
+|--------|------|---------|
+| id | int (PK) | |
+| name | string | tên phòng ban, duy nhất |
+| description | text | |
+| lead | FK → User (null) | lãnh đạo phòng ban; nhận thông báo khi giao việc cho cả phòng |
+| created_at / updated_at | datetime | tự động |
+
+#### Team (Nhóm)
+| Trường | Kiểu | Ghi chú |
+|--------|------|---------|
+| id | int (PK) | |
+| name | string | tên nhóm, duy nhất |
+| department | FK → Department | nhóm thuộc về 1 phòng ban |
+| description | text | |
+| created_at / updated_at | datetime | tự động |
+
+#### TeamMembership (Nhân viên ∈ Nhóm)
+| Trường | Kiểu | Ghi chú |
+|--------|------|---------|
+| user | FK → User | |
+| team | FK → Team | |
+| role | enum | `leader` \| `member` — **leader** của nhóm nhận thông báo khi giao việc cho nhóm |
+
+> Phòng ban của một nhân viên suy ra từ `team.department`.
+
 ### User (mở rộng từ Django `AbstractUser`)
 | Trường | Kiểu | Ghi chú |
 |--------|------|---------|
 | id | int (PK) | |
 | username / email | string | email dùng để đăng nhập & gửi thông báo |
-| full_name | string | |
-| role | enum | `admin` \| `leader` \| `member` |
+| first_name / last_name | string | |
+| is_admin | bool | quyền quản trị toàn hệ thống (vai trò `admin`) |
+| role theo nhóm | — | `leader` / `member` qua `TeamMembership.role` |
 | is_active | bool | |
+
+> **Vai trò (role):** `admin` là cờ cấp hệ thống (`is_admin`); `leader` / `member` là vai trò
+> **theo từng nhóm** qua `TeamMembership.role` — một người có thể là leader nhóm này, member nhóm khác.
 
 ### Task
 | Trường | Kiểu | Ghi chú |
@@ -62,22 +101,36 @@
 | description | text | |
 | status | enum | `new` \| `in_progress` \| `done` \| `overdue` |
 | priority | enum | `low` \| `medium` \| `high` (tùy chọn) |
-| assignee | FK → User | người phụ trách |
+| assignee_type | enum | `user` \| `team` \| `department` — loại đối tượng được giao |
+| assignee_user | FK → User (null) | set khi `assignee_type = user` |
+| assignee_team | FK → Team (null) | set khi `assignee_type = team` |
+| assignee_department | FK → Department (null) | set khi `assignee_type = department` |
 | created_by | FK → User | người tạo |
-| due_date | datetime | dùng để tính quá hạn |
+| due_date | datetime | mốc deadline để tính quá hạn |
 | created_at / updated_at | datetime | tự động |
 
-> **Quy tắc quá hạn:** task có `due_date < now` và `status != done` sẽ được coi là `overdue` (tính lúc đọc dữ liệu hoặc qua job định kỳ).
+> **Ràng buộc giao việc:** đúng **một** trong `assignee_user / assignee_team / assignee_department`
+> được set, khớp với `assignee_type`. Khi giao cho **nhóm/phòng ban**, hệ thống tạo thông báo gửi
+> tới **leader** của nhóm/phòng ban tương ứng (nhân viên trong đơn vị vẫn xem được việc của đơn vị mình).
+>
+> **Quy tắc quá hạn (tự động):** task có `due_date < now` và `status ∉ {done}` được **hệ thống tự
+> động** chuyển `status = overdue` qua **job định kỳ** (Celery beat hoặc management command chạy theo
+> lịch). Giữa hai lần chạy job, API có thể trả thêm cờ `is_overdue` suy ra tức thời để UI không bị trễ.
 
 ## 5. Phân quyền (RBAC)
 
+Ba vai trò: **`admin`** (quản trị toàn hệ thống), **`leader`** (lãnh đạo nhóm/phòng), **`member`**
+(nhân viên). Bảng dưới là quyết định thiết kế cho dự án (có thể điều chỉnh):
+
 | Hành động | admin | leader | member |
 |-----------|:---:|:---:|:---:|
+| Quản lý phòng ban / nhóm (CRUD) | ✅ | ❌ | ❌ |
 | Quản lý người dùng (CRUD) | ✅ | ❌ | ❌ |
-| Tạo / sửa / xoá mọi task | ✅ | ✅ (trong nhóm) | ❌ |
-| Giao việc cho người khác | ✅ | ✅ | ❌ |
-| Xem dashboard toàn bộ | ✅ | ✅ | chỉ task của mình |
+| Tạo / sửa / xoá task | ✅ (mọi task) | ✅ (trong nhóm/phòng mình phụ trách) | ❌ (chỉ task mình tạo cho bản thân) |
+| Giao việc cho cá nhân / nhóm / phòng ban | ✅ (bất kỳ) | ✅ (trong phạm vi nhóm/phòng mình) | ❌ |
+| Nhận thông báo khi nhóm/phòng được giao việc | — | ✅ (leader của đơn vị) | ❌ |
 | Cập nhật trạng thái task được giao | ✅ | ✅ | ✅ |
+| Xem dashboard | toàn bộ | nhóm/phòng phụ trách | chỉ task của mình |
 
 ## 6. API chính (REST)
 
@@ -87,12 +140,19 @@
 | POST | `/api/auth/refresh/` | Làm mới token |
 | GET/POST | `/api/users/` | Danh sách / tạo người dùng (admin) |
 | GET/PUT/DELETE | `/api/users/{id}/` | Chi tiết / sửa / xoá người dùng |
-| GET/POST | `/api/tasks/` | Danh sách (phân trang, filter, search) / tạo task |
+| GET/POST | `/api/departments/` | Danh sách / tạo phòng ban (admin) |
+| GET/PUT/DELETE | `/api/departments/{id}/` | Chi tiết / sửa / xoá phòng ban |
+| GET/POST | `/api/teams/` | Danh sách / tạo nhóm |
+| GET/PUT/DELETE | `/api/teams/{id}/` | Chi tiết / sửa / xoá nhóm + quản lý thành viên |
+| GET/POST | `/api/tasks/` | Danh sách (phân trang, filter, search) / tạo task (giao cho user/team/department) |
 | GET/PUT/PATCH/DELETE | `/api/tasks/{id}/` | Chi tiết / cập nhật / xoá task |
 | PATCH | `/api/tasks/{id}/status/` | Cập nhật trạng thái |
-| GET | `/api/dashboard/stats/` | Thống kê theo trạng thái / người phụ trách |
+| GET | `/api/dashboard/stats/` | Thống kê theo trạng thái / người phụ trách / nhóm / phòng ban |
 
-Query params cho `/api/tasks/`: `?status=`, `?assignee=`, `?search=`, `?page=`, `?ordering=`.
+Khi tạo task, body chứa `assignee_type` (`user`\|`team`\|`department`) cùng đúng một trong
+`assignee_user` / `assignee_team` / `assignee_department`.
+
+Query params cho `/api/tasks/`: `?status=`, `?assignee_type=`, `?assignee_user=`, `?team=`, `?department=`, `?search=`, `?page=`, `?ordering=`.
 
 API docs: `GET /api/schema/swagger-ui/` (drf-spectacular).
 
@@ -154,10 +214,11 @@ Sau khi `pre-commit install`, mỗi lần `git commit` sẽ tự chạy Ruff (`r
 
 ## 9. Tiêu chí hoàn thành (Definition of Done)
 
-- [ ] CRUD đầy đủ cho Task và User.
+- [ ] CRUD đầy đủ cho Phòng ban, Nhóm, User và Task (Nhân viên ∈ Nhóm ∈ Phòng ban).
+- [ ] Giao việc cho cá nhân / nhóm / phòng ban; giao cho nhóm/phòng → thông báo tới leader đơn vị.
 - [ ] Phân quyền cơ bản theo 3 role hoạt động đúng.
-- [ ] Trạng thái task chuyển đúng vòng đời, tự đánh dấu quá hạn.
-- [ ] Dashboard thống kê theo trạng thái và người phụ trách.
+- [ ] Trạng thái task chuyển đúng vòng đời; **hệ thống tự động** chuyển `overdue` qua job định kỳ.
+- [ ] Dashboard thống kê theo trạng thái / người phụ trách / nhóm / phòng ban.
 - [ ] Phân trang + tìm kiếm + lọc.
 - [ ] Swagger/OpenAPI mô tả đầy đủ endpoint.
 - [ ] `docker compose up` chạy được toàn bộ hệ thống.
