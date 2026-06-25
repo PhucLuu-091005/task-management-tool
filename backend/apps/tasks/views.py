@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework import generics
 from rest_framework.exceptions import ValidationError
 
+from apps.notifications.services import notify_task_assignment
 from apps.tasks.constants import INVALID_FILTER_VALUE_ERROR_MESSAGE
 from apps.tasks.models import Task
 from apps.tasks.permissions import CanEditTask, visible_tasks
@@ -49,7 +50,8 @@ class TaskListCreateView(generics.ListCreateAPIView):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        task = serializer.save(created_by=self.request.user)
+        notify_task_assignment(task, actor=self.request.user)
 
 
 class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -58,3 +60,21 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return visible_tasks(self.request.user)
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        before = (
+            instance.assignee_type,
+            instance.assignee_user_id,
+            instance.assignee_team_id,
+            instance.assignee_department_id,
+        )
+        task = serializer.save()
+        after = (
+            task.assignee_type,
+            task.assignee_user_id,
+            task.assignee_team_id,
+            task.assignee_department_id,
+        )
+        if after != before:
+            notify_task_assignment(task, actor=self.request.user)
