@@ -31,6 +31,7 @@ LOCAL_APPS = [
     "apps.users",
     "apps.tasks",
     "apps.teams",
+    "apps.notifications",
 ]
 
 INSTALLED_APPS = DEFAULT_APPS + THIRD_PARTY_APPS + LOCAL_APPS
