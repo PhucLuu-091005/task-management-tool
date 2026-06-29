@@ -41,8 +41,9 @@ def test_filter_by_priority(admin_client, creator, team):
 
 def test_filter_by_is_overdue(admin_client, creator, team):
     past = timezone.now() - timedelta(days=1)
-    _team_task(creator, team, title="late", status=Task.Status.NEW, due_date=past)
-    _team_task(creator, team, title="closed", status=Task.Status.DONE, due_date=past)
+    _team_task(creator, team, title="late", status=Task.Status.OVERDUE, due_date=past)
+    # Past-due but not yet flipped by the job: stored status wins, so not overdue.
+    _team_task(creator, team, title="pending", status=Task.Status.NEW, due_date=past)
 
     res = admin_client.get(reverse("task-list"), {"is_overdue": "true"})
 

@@ -1,17 +1,18 @@
-from django.db.models import Count, Q
+from django.db.models import Count
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.filters import SearchFilter
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.notifications.services import notify_task_assignment
-from apps.tasks.constants import (
-    INVALID_FILTER_VALUE_ERROR_MESSAGE,
-    NOT_ALLOWED_TO_ASSIGN_ERROR_MESSAGE,
-)
+from apps.tasks.constants import NOT_ALLOWED_TO_ASSIGN_ERROR_MESSAGE
+from apps.tasks.filters import TaskFilter
 from apps.tasks.models import Task
 from apps.tasks.permissions import (
     CanCreateTask,
@@ -21,46 +22,23 @@ from apps.tasks.permissions import (
 )
 from apps.tasks.serializers import TaskSerializer
 
-_INT_FILTERS = {
-    "assignee_user": "assignee_user_id",
-    "team": "assignee_team_id",
-    "department": "assignee_department_id",
-}
+
+class TaskPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 class TaskListCreateView(generics.ListCreateAPIView):
     serializer_class = TaskSerializer
     permission_classes = [IsAuthenticated, CanCreateTask]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = TaskFilter
+    search_fields = ["title", "description"]
+    pagination_class = TaskPagination
 
     def get_queryset(self):
-        qs = visible_tasks(self.request.user)
-        params = self.request.query_params
-
-        if status := params.get("status"):
-            qs = qs.filter(status=status)
-
-        if assignee_type := params.get("assignee_type"):
-            qs = qs.filter(assignee_type=assignee_type)
-
-        for param, field in _INT_FILTERS.items():
-            raw = params.get(param)
-            if raw:
-                try:
-                    qs = qs.filter(**{field: int(raw)})
-                except ValueError as exc:
-                    raise ValidationError(
-                        INVALID_FILTER_VALUE_ERROR_MESSAGE.format(field=param)
-                    ) from exc
-
-        is_overdue = params.get("is_overdue")
-        if is_overdue in {"true", "false"}:
-            overdue_q = Q(status=Task.Status.OVERDUE)
-            qs = qs.filter(overdue_q) if is_overdue == "true" else qs.exclude(overdue_q)
-
-        if search := params.get("search"):
-            qs = qs.filter(title__icontains=search)
-
-        return qs
+        return visible_tasks(self.request.user)
 
     def perform_create(self, serializer):
         user = self.request.user
