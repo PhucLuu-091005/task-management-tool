@@ -2,7 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 
-from apps.teams.models import Team, TeamMembership
+from apps.teams.models import Department, Team, TeamMembership
 
 User = get_user_model()
 
@@ -43,7 +43,8 @@ def test_new_user_is_not_admin_by_default(user):
 
 @pytest.mark.django_db
 def test_with_memberships_prefetches_team(user, django_assert_num_queries):
-    team = Team.objects.create(name="Alpha")
+    dept = Department.objects.create(name="Dept Models Alpha")
+    team = Team.objects.create(name="Alpha", department=dept)
     TeamMembership.objects.create(user=user, team=team, role=TeamMembership.Role.MEMBER)
 
     fetched = User.objects.with_memberships().get(pk=user.pk)

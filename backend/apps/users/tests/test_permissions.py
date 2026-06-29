@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.test import APIRequestFactory
 
-from apps.teams.models import Team, TeamMembership
+from apps.teams.models import Department, Team, TeamMembership
 from apps.users.permissions import IsAdmin, IsTeamLeader, IsTeamMember
 
 User = get_user_model()
@@ -41,7 +41,8 @@ def plain_user():
 
 @pytest.fixture
 def team():
-    return Team.objects.create(name="Alpha")
+    dept = Department.objects.create(name="Dept Alpha")
+    return Team.objects.create(name="Alpha", department=dept)
 
 
 # --- IsAdmin ---
@@ -78,7 +79,7 @@ def test_team_leader_denies_plain_member_of_target_team(make_request, plain_user
 
 
 def test_team_leader_denies_leader_of_a_different_team(make_request, plain_user, team):
-    other = Team.objects.create(name="Beta")
+    other = Team.objects.create(name="Beta", department=Department.objects.create(name="Dept Beta"))
     TeamMembership.objects.create(user=plain_user, team=other, role=TeamMembership.Role.LEADER)
     assert IsTeamLeader().has_object_permission(make_request(plain_user), None, team) is False
 

@@ -2,7 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 
-from apps.teams.models import Team, TeamMembership
+from apps.teams.models import Department, Team, TeamMembership
 
 User = get_user_model()
 
@@ -11,7 +11,8 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def team():
-    return Team.objects.create(name="Team Alpha")
+    dept = Department.objects.create(name="Membership Dept")
+    return Team.objects.create(name="Team Alpha", department=dept)
 
 
 @pytest.fixture
@@ -35,8 +36,10 @@ def test_membership_links_user_and_team_with_role(team, member_user):
 
 
 def test_user_can_lead_one_team_and_be_member_of_another(member_user):
-    alpha = Team.objects.create(name="Alpha")
-    beta = Team.objects.create(name="Beta")
+    alpha_dept = Department.objects.create(name="Alpha Dept")
+    beta_dept = Department.objects.create(name="Beta Dept")
+    alpha = Team.objects.create(name="Alpha", department=alpha_dept)
+    beta = Team.objects.create(name="Beta", department=beta_dept)
     TeamMembership.objects.create(user=member_user, team=alpha, role=TeamMembership.Role.LEADER)
     TeamMembership.objects.create(user=member_user, team=beta, role=TeamMembership.Role.MEMBER)
     assert member_user.teams.count() == 2
