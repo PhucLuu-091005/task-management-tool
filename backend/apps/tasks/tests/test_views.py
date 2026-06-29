@@ -38,7 +38,7 @@ def test_list_scoped_to_visible(member_client, creator, team, other_team):
     )
     res = member_client.get(reverse("task-list"))
     assert res.status_code == 200
-    titles = {t["title"] for t in res.data}
+    titles = {t["title"] for t in res.data["results"]}
     assert "Visible" in titles and "Hidden" not in titles
 
 
@@ -64,14 +64,14 @@ def test_filter_by_status(admin_client, creator, team):
     _team_task(creator, team, title="New one")
     _team_task(creator, team, title="Done one", status=Task.Status.DONE)
     res = admin_client.get(reverse("task-list"), {"status": "done"})
-    assert [t["title"] for t in res.data] == ["Done one"]
+    assert [t["title"] for t in res.data["results"]] == ["Done one"]
 
 
 def test_search_by_title(admin_client, creator, team):
     _team_task(creator, team, title="Deploy pipeline")
     _team_task(creator, team, title="Write docs")
     res = admin_client.get(reverse("task-list"), {"search": "deploy"})
-    assert [t["title"] for t in res.data] == ["Deploy pipeline"]
+    assert [t["title"] for t in res.data["results"]] == ["Deploy pipeline"]
 
 
 def test_invalid_assignee_user_filter_returns_400(admin_client):
