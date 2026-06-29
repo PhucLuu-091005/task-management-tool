@@ -1,6 +1,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 
+from apps.teams.models import Department, Team, TeamMembership
 from apps.users.constants import (
     EMAIL_UNIQUE_ERROR_MESSAGE,
     USERNAME_CONTENT_ERROR_MESSAGE,
@@ -142,8 +143,6 @@ def test_user_serializer_includes_is_admin(user):
 
 
 def test_user_serializer_lists_team_memberships(user):
-    from apps.teams.models import Department, Team, TeamMembership
-
     dept = Department.objects.create(name="Dept Serializer Alpha")
     team = Team.objects.create(name="Alpha", department=dept)
     TeamMembership.objects.create(user=user, team=team, role=TeamMembership.Role.LEADER)
