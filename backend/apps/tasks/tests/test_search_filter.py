@@ -57,3 +57,29 @@ def test_search_matches_description(admin_client, creator, team):
     res = admin_client.get(reverse("task-list"), {"search": "kubernetes"})
 
     assert [t["title"] for t in res.data["results"]] == ["Ticket"]
+
+
+def test_invalid_choice_filter_returns_400(admin_client):
+    res = admin_client.get(reverse("task-list"), {"priority": "bogus"})
+
+    assert res.status_code == 400
+
+
+def test_pagination_paginates_beyond_one_page(admin_client, creator, team):
+    for i in range(25):
+        _team_task(creator, team, title=f"T{i:02d}")
+
+    page1 = admin_client.get(reverse("task-list"))
+    assert page1.data["count"] == 25
+    assert len(page1.data["results"]) == 20
+    assert page1.data["next"] is not None
+
+    page2 = admin_client.get(reverse("task-list"), {"page": 2})
+    assert len(page2.data["results"]) == 5
+
+
+def test_other_list_endpoints_stay_unpaginated(admin_client):
+    res = admin_client.get(reverse("team-list"))
+
+    assert res.status_code == 200
+    assert isinstance(res.data, list)
