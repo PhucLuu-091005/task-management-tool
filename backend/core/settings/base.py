@@ -129,7 +129,7 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "REST API for the internal task management system.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
-    # Docs are browsable without a token; the documented endpoints stay auth-gated.
+    # Pin docs as public explicitly so a future drf-spectacular default change can't gate them.
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
 }
 
