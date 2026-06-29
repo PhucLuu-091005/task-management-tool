@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 
 from apps.tasks.models import Task
+from apps.teams.models import Team, TeamMembership
 
 pytestmark = pytest.mark.django_db
 
@@ -77,3 +78,20 @@ def test_stats_requires_authentication(api_client):
     res = api_client.get(reverse("task-stats"))
 
     assert res.status_code in (401, 403)
+
+
+def test_stats_dedupes_department_task_across_multiple_member_teams(
+    api_client, creator, department, member_user
+):
+    t1 = Team.objects.create(name="A", department=department)
+    t2 = Team.objects.create(name="B", department=department)
+    TeamMembership.objects.create(user=member_user, team=t1)
+    TeamMembership.objects.create(user=member_user, team=t2)
+    _task(creator, Task.Status.NEW, department=department)
+
+    api_client.force_authenticate(user=member_user)
+    res = api_client.get(reverse("task-stats"))
+
+    assert res.data["total"] == 1
+    assert res.data["by_status"]["new"] == 1
+    assert res.data["by_department"] == [{"assignee_department_id": department.id, "count": 1}]
