@@ -1,4 +1,5 @@
 from django.db.models import Count
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
@@ -16,11 +17,12 @@ from apps.tasks.filters import TaskFilter
 from apps.tasks.models import Task
 from apps.tasks.permissions import (
     CanCreateTask,
+    CanDeleteAttachment,
     CanEditTask,
     can_manage_assignee,
     visible_tasks,
 )
-from apps.tasks.serializers import TaskSerializer
+from apps.tasks.serializers import TaskAttachmentSerializer, TaskSerializer
 
 
 class TaskPagination(PageNumberPagination):
@@ -38,6 +40,9 @@ class TaskListCreateView(generics.ListCreateAPIView):
     pagination_class = TaskPagination
 
     def get_queryset(self):
+        # Schema generation introspects the queryset with an anonymous fake view.
+        if getattr(self, "swagger_fake_view", False):
+            return Task.objects.none()
         return visible_tasks(self.request.user)
 
     def perform_create(self, serializer):
@@ -115,3 +120,26 @@ class TaskStatsView(APIView):
                 ),
             }
         )
+
+
+class TaskAttachmentListCreateView(generics.ListCreateAPIView):
+    serializer_class = TaskAttachmentSerializer
+    pagination_class = None
+
+    def _task(self):
+        return get_object_or_404(visible_tasks(self.request.user), pk=self.kwargs["task_id"])
+
+    def get_queryset(self):
+        return self._task().attachments.all()
+
+    def perform_create(self, serializer):
+        serializer.save(task=self._task(), added_by=self.request.user)
+
+
+class TaskAttachmentDetailView(generics.DestroyAPIView):
+    serializer_class = TaskAttachmentSerializer
+    permission_classes = [IsAuthenticated, CanDeleteAttachment]
+
+    def get_queryset(self):
+        task = get_object_or_404(visible_tasks(self.request.user), pk=self.kwargs["task_id"])
+        return task.attachments.all()
