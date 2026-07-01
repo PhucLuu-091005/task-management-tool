@@ -18,3 +18,5 @@ ROADMAP.md
 
 # Local-only Claude Code skills (kept out of git and CI)
 .claude/skills/explain/
+# Uploaded media (dev)
+backend/media/

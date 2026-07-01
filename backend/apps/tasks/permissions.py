@@ -37,3 +37,10 @@ class CanEditTask(BasePermission):
         if obj.assignee_department_id:
             return obj.assignee_department.teams.filter(id__in=leader_team_ids).exists()
         return False
+
+
+class CanDeleteAttachment(BasePermission):
+    def has_object_permission(self, request, view, obj) -> bool:
+        if obj.added_by_id == request.user.id:
+            return True
+        return CanEditTask().has_object_permission(request, view, obj.task)
