@@ -140,3 +140,45 @@ def test_leader_can_delete_any_attachment(leader_client, team, creator, admin_us
     res = leader_client.delete(reverse("task-attachment-detail", args=[task.id, att.id]))
 
     assert res.status_code == 204
+
+
+def test_upload_rejects_oversized_dimensions(member_client, team, creator, monkeypatch):
+    monkeypatch.setattr("apps.tasks.validators.MAX_IMAGE_PIXELS", 10)
+    task = _team_task(creator, team)
+
+    res = member_client.post(_list_url(task), {"image": _image_upload()}, format="multipart")
+
+    assert res.status_code == 400
+    assert "image" in res.data
+
+
+def test_unauthenticated_cannot_delete(api_client, team, creator):
+    task = _team_task(creator, team)
+    att = TaskAttachment.objects.create(task=task, added_by=creator, image="task_attachments/a.png")
+
+    res = api_client.delete(reverse("task-attachment-detail", args=[task.id, att.id]))
+
+    assert res.status_code in (401, 403)
+
+
+def test_delete_via_wrong_task_url_is_404(member_client, team_member, team, creator):
+    task_a = _team_task(creator, team)
+    task_b = _team_task(creator, team)
+    att = TaskAttachment.objects.create(
+        task=task_b, added_by=team_member, image="task_attachments/a.png"
+    )
+
+    res = member_client.delete(reverse("task-attachment-detail", args=[task_a.id, att.id]))
+
+    assert res.status_code == 404
+
+
+def test_saved_image_is_intact(member_client, team, creator):
+    task = _team_task(creator, team)
+    data = _png_bytes().read()
+    upload = SimpleUploadedFile("shot.png", data, content_type="image/png")
+
+    res = member_client.post(_list_url(task), {"image": upload}, format="multipart")
+
+    att = TaskAttachment.objects.get(id=res.data["id"])
+    assert att.image.size == len(data)
