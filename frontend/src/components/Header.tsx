@@ -13,7 +13,7 @@ import { useProfile } from "@/lib/hooks";
 const NAV_ITEMS = [
   { href: "/tasks", label: "Công việc" },
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/", label: "Tài khoản" },
+  { href: "/account", label: "Tài khoản" },
 ];
 
 function initials(last?: string, first?: string): string {
@@ -39,20 +39,15 @@ export default function Header() {
     <header className="sticky top-0 z-30 border-b border-line bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href="/tasks" className="flex items-center gap-2.5">
             <span className="grid h-7 w-7 place-items-center rounded-lg bg-ink text-white">
               <Activity className="h-4 w-4" strokeWidth={2} />
             </span>
-            <span className="text-[15px] font-semibold tracking-tight">
-              Quản lý công việc
-            </span>
+            <span className="text-[15px] font-semibold tracking-tight">Chốt</span>
           </Link>
           <nav className="hidden items-center gap-1 text-sm sm:flex">
             {NAV_ITEMS.map((item) => {
-              const active =
-                item.href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(item.href);
+              const active = pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}

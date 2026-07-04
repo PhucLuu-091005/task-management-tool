@@ -4,7 +4,7 @@ import "./globals.css";
 import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: "Quản lý công việc nội bộ",
+  title: "Chốt — Giao việc, chốt hạn, xong.",
   description: "Hệ thống quản lý công việc cho phòng ban, nhóm và nhân viên",
 };
 

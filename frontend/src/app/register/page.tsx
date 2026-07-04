@@ -24,7 +24,7 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (hasSession()) router.replace("/");
+    if (hasSession()) router.replace("/tasks");
   }, [router]);
 
   function setField(field: keyof typeof form) {
@@ -39,7 +39,7 @@ export default function RegisterPage() {
     try {
       await register(form);
       await login(form.username, form.password);
-      router.replace("/");
+      router.replace("/tasks");
     } catch (err) {
       setError(apiErrorMessage(err, "Đăng ký thất bại. Vui lòng thử lại sau."));
       setSubmitting(false);
@@ -53,9 +53,7 @@ export default function RegisterPage() {
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-ink text-white">
             <Activity className="h-5 w-5" strokeWidth={2} />
           </span>
-          <span className="text-[15px] font-semibold tracking-tight">
-            Quản lý công việc
-          </span>
+          <span className="text-[15px] font-semibold tracking-tight">Chốt</span>
         </div>
 
         <h1 className="text-xl font-semibold tracking-tight">Đăng ký</h1>

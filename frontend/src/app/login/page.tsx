@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (hasSession()) router.replace("/");
+    if (hasSession()) router.replace("/tasks");
   }, [router]);
 
   async function handleSubmit(e: FormEvent) {
@@ -28,7 +28,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login(username, password);
-      router.replace("/");
+      router.replace("/tasks");
     } catch (err) {
       setError(
         apiErrorMessage(err, "Đăng nhập thất bại. Vui lòng thử lại sau."),
@@ -44,9 +44,7 @@ export default function LoginPage() {
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-ink text-white">
             <Activity className="h-5 w-5" strokeWidth={2} />
           </span>
-          <span className="text-[15px] font-semibold tracking-tight">
-            Quản lý công việc
-          </span>
+          <span className="text-[15px] font-semibold tracking-tight">Chốt</span>
         </div>
 
         <h1 className="text-xl font-semibold tracking-tight">Đăng nhập</h1>
