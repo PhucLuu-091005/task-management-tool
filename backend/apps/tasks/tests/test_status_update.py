@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.tasks.models import Task
 
@@ -64,14 +67,35 @@ def test_response_is_full_task(member_client, team, creator):
 
 
 def test_overdue_task_can_be_completed(member_client, team, creator):
-    task = _team_task(creator, team)
+    task = Task.objects.create(
+        title="Task",
+        created_by=creator,
+        assignee_type=Task.AssigneeType.TEAM,
+        assignee_team=team,
+        due_date=timezone.now() - timedelta(days=1),
+    )
     Task.objects.filter(id=task.id).update(status=Task.Status.OVERDUE)
 
     res = member_client.patch(_url(task), {"status": "done"})
 
     assert res.status_code == 200
+    # done clears the derived flag even though the due date has passed
+    assert res.data["is_overdue"] is False
     task.refresh_from_db()
     assert task.status == Task.Status.DONE
+
+
+def test_department_member_updates_status(member_client, team, department, creator):
+    task = Task.objects.create(
+        title="Task",
+        created_by=creator,
+        assignee_type=Task.AssigneeType.DEPARTMENT,
+        assignee_department=department,
+    )
+
+    res = member_client.patch(_url(task), {"status": "in_progress"})
+
+    assert res.status_code == 200
 
 
 def test_cannot_set_overdue_manually(member_client, team, creator):
