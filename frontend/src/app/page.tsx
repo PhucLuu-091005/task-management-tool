@@ -1,29 +1,11 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-
-import { hasSession } from "@/lib/auth-storage";
-import { logout } from "@/lib/auth";
-import { useProfile } from "@/lib/hooks";
+import Header from "@/components/Header";
+import { useProfile, useRequireAuth } from "@/lib/hooks";
 
 export default function HomePage() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
   const { data: user, isPending, isError } = useProfile();
-
-  useEffect(() => {
-    // isError also covers the case where the refresh flow failed and tokens were cleared.
-    if (!hasSession() || isError) router.replace("/login");
-  }, [router, isError]);
-
-  async function handleLogout() {
-    await logout();
-    // Drop cached data so the next login can't flash the previous user's profile.
-    queryClient.clear();
-    router.replace("/login");
-  }
+  useRequireAuth(isError);
 
   if (isPending || isError || !user) {
     return (
@@ -35,24 +17,9 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen">
-      <header className="border-b border-zinc-200 dark:border-zinc-800">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-          <h1 className="text-base font-semibold">Quản lý công việc nội bộ</h1>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-zinc-500">
-              {user.last_name} {user.first_name}
-            </span>
-            <button
-              onClick={handleLogout}
-              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-            >
-              Đăng xuất
-            </button>
-          </div>
-        </div>
-      </header>
+      <Header />
 
-      <div className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+      <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
         <section className="rounded-xl border border-zinc-200 p-6 dark:border-zinc-800">
           <h2 className="text-sm font-medium text-zinc-500">Tài khoản</h2>
           <dl className="mt-3 grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
@@ -100,10 +67,6 @@ export default function HomePage() {
             </ul>
           )}
         </section>
-
-        <p className="text-sm text-zinc-400">
-          Danh sách công việc sẽ có ở bước tiếp theo (Epic I2).
-        </p>
       </div>
     </main>
   );
