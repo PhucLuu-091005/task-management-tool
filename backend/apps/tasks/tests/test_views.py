@@ -55,6 +55,59 @@ def test_admin_can_create_task_for_any_team(admin_client, other_team):
     assert res.status_code == 201
 
 
+def test_leader_can_create_user_task_for_team_member(leader_client, team_leader, team_member):
+    res = leader_client.post(
+        reverse("task-list"),
+        {"title": "New", "assignee_type": "user", "assignee_user": team_member.id},
+        format="json",
+    )
+    assert res.status_code == 201
+
+
+def test_leader_cannot_create_user_task_for_non_member(leader_client, team_leader, outsider_user):
+    res = leader_client.post(
+        reverse("task-list"),
+        {"title": "New", "assignee_type": "user", "assignee_user": outsider_user.id},
+        format="json",
+    )
+    assert res.status_code == 403
+
+
+def test_leader_cannot_create_department_task(leader_client, team_leader, department):
+    # A team leader has no authority over department-scoped tasks, even in their own department.
+    res = leader_client.post(
+        reverse("task-list"),
+        {"title": "New", "assignee_type": "department", "assignee_department": department.id},
+        format="json",
+    )
+    assert res.status_code == 403
+
+
+def test_department_lead_can_create_department_task(dept_lead_client, department):
+    res = dept_lead_client.post(
+        reverse("task-list"),
+        {"title": "New", "assignee_type": "department", "assignee_department": department.id},
+        format="json",
+    )
+    assert res.status_code == 201
+
+
+def test_department_lead_can_edit_others_department_task(dept_lead_client, creator, department):
+    # A dept task created by someone else must be visible to the lead so they can edit it.
+    task = Task.objects.create(
+        title="Dept",
+        created_by=creator,
+        assignee_type=Task.AssigneeType.DEPARTMENT,
+        assignee_department=department,
+    )
+    res = dept_lead_client.patch(
+        reverse("task-detail", args=[task.id]), {"title": "Renamed"}, format="json"
+    )
+    assert res.status_code == 200
+    task.refresh_from_db()
+    assert task.title == "Renamed"
+
+
 def test_member_can_retrieve_visible_team_task(member_client, creator, team):
     task = _team_task(creator, team)
     res = member_client.get(reverse("task-detail", args=[task.id]))
