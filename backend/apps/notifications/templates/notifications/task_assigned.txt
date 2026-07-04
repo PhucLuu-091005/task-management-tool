@@ -7,7 +7,8 @@ Công việc: {{ task_title }}
 Mô tả:
 {{ task_description }}
 {% endif %}
-Vui lòng đăng nhập vào hệ thống để xem chi tiết và bắt đầu thực hiện.
+Xem chi tiết và bắt đầu thực hiện tại:
+{{ task_url }}
 
 Trân trọng,
 Task Management

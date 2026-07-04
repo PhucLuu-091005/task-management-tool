@@ -47,11 +47,16 @@ def notify_task_assignment(task, actor=None) -> int:
     if not emails:
         return 0
     subject = constants.TASK_ASSIGNED_SUBJECT.format(title=task.title)
+    task_url = f"{settings.FRONTEND_URL}{constants.TASK_DETAIL_PATH.format(id=task.id)}"
     # Subject/body are rendered here so the worker thread never touches the DB —
     # the task row is already committed (no ATOMIC_REQUESTS).
     body = render_to_string(
         constants.TASK_ASSIGNED_TEMPLATE,
-        {"task_title": task.title, "task_description": task.description},
+        {
+            "task_title": task.title,
+            "task_description": task.description,
+            "task_url": task_url,
+        },
     )
     _dispatch(_send_assignment_email, subject, body, emails)
     return len(emails)

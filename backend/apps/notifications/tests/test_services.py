@@ -18,6 +18,15 @@ def test_user_assignment_emails_assignee(creator, recipient, mailoutbox):
     assert [m.to for m in mailoutbox] == [[recipient.email]]
 
 
+def test_email_includes_task_title_and_link(settings, creator, recipient, mailoutbox):
+    settings.FRONTEND_URL = "https://app.example.com"
+    task = _task(creator, assignee_type=Task.AssigneeType.USER, assignee_user=recipient)
+    notify_task_assignment(task, actor=creator)
+    message = mailoutbox[0]
+    assert task.title in message.subject
+    assert f"https://app.example.com/tasks/{task.id}" in message.body
+
+
 def test_team_assignment_emails_only_leaders(creator, team, team_leader, team_member, mailoutbox):
     task = _task(creator, assignee_type=Task.AssigneeType.TEAM, assignee_team=team)
     notify_task_assignment(task, actor=creator)
