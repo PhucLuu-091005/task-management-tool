@@ -9,6 +9,7 @@ import { useProfile } from "@/lib/hooks";
 
 const NAV_ITEMS = [
   { href: "/tasks", label: "Công việc" },
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/", label: "Tài khoản" },
 ];
 
