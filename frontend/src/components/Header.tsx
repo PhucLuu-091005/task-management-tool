@@ -34,19 +34,25 @@ export default function Header() {
             Quản lý công việc nội bộ
           </span>
           <nav className="flex items-center gap-4 text-sm">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={
-                  pathname === item.href
-                    ? "font-medium"
-                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-                }
-              >
-                {item.label}
-              </Link>
-            ))}
+            {NAV_ITEMS.map((item) => {
+              const active =
+                item.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={
+                    active
+                      ? "font-medium"
+                      : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                  }
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
         </div>
         <div className="flex items-center gap-3">
