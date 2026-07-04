@@ -1,7 +1,6 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -10,14 +9,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        card: "var(--card)",
-        ink: "var(--foreground)",
-        "ink-soft": "var(--ink-soft)",
-        muted: "var(--muted)",
-        faint: "var(--faint)",
-        line: "var(--line)",
-        "line-strong": "var(--line-strong)",
+        background: "rgb(var(--background) / <alpha-value>)",
+        card: "rgb(var(--card) / <alpha-value>)",
+        ink: "rgb(var(--foreground) / <alpha-value>)",
+        "ink-soft": "rgb(var(--ink-soft) / <alpha-value>)",
+        muted: "rgb(var(--muted) / <alpha-value>)",
+        faint: "rgb(var(--faint) / <alpha-value>)",
+        line: "rgb(var(--line) / <alpha-value>)",
+        "line-strong": "rgb(var(--line-strong) / <alpha-value>)",
         // Semantic status — the only colour in the system, chips only.
         status: {
           new: "#4b5563",

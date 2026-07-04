@@ -4,25 +4,26 @@
 
 :root {
   color-scheme: light;
-  --background: #fafafa;
-  --card: #ffffff;
-  --foreground: #14151a;
-  --ink-soft: #22242b;
-  --muted: #565962;
-  --faint: #9a9ba2;
-  --line: #eaeaec;
-  --line-strong: #d8d8dc;
+  /* Channel triplets so Tailwind's `/NN` alpha modifiers resolve. */
+  --background: 250 250 250;
+  --card: 255 255 255;
+  --foreground: 20 21 26;
+  --ink-soft: 34 36 43;
+  --muted: 86 89 98;
+  --faint: 154 155 162;
+  --line: 234 234 236;
+  --line-strong: 216 216 220;
 }
 
 *,
 *::before,
 *::after {
-  border-color: var(--line);
+  border-color: rgb(var(--line));
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: rgb(var(--background));
+  color: rgb(var(--foreground));
   font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text",
     "Helvetica Neue", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
