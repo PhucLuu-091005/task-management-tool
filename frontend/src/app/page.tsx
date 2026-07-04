@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -9,6 +10,7 @@ import { useProfile } from "@/lib/hooks";
 
 export default function HomePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: user, isPending, isError } = useProfile();
 
   useEffect(() => {
@@ -18,6 +20,8 @@ export default function HomePage() {
 
   async function handleLogout() {
     await logout();
+    // Drop cached data so the next login can't flash the previous user's profile.
+    queryClient.clear();
     router.replace("/login");
   }
 

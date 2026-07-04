@@ -27,7 +27,7 @@ async function refreshAccessToken(): Promise<string> {
   const res = await axios.post(`${API_URL}/api/users/token/refresh`, {
     refresh,
   });
-  // ROTATE_REFRESH_TOKENS is on server-side, so a new refresh token comes back too.
+  // Server rotates refresh tokens; fall back to the old one if absent.
   setTokens({ access: res.data.access, refresh: res.data.refresh ?? refresh });
   return res.data.access;
 }
