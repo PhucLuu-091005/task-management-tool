@@ -15,8 +15,17 @@ _ASSIGNEE_FIELDS = {
 }
 
 
+def _user_display_name(user) -> str:
+    # Vietnamese name order: family name first.
+    return f"{user.last_name} {user.first_name}".strip() or user.username
+
+
 class TaskSerializer(serializers.ModelSerializer):
     is_overdue = serializers.BooleanField(read_only=True)
+    assignee_user_name = serializers.SerializerMethodField()
+    assignee_team_name = serializers.SerializerMethodField()
+    assignee_department_name = serializers.SerializerMethodField()
+    created_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
@@ -28,15 +37,31 @@ class TaskSerializer(serializers.ModelSerializer):
             "priority",
             "assignee_type",
             "assignee_user",
+            "assignee_user_name",
             "assignee_team",
+            "assignee_team_name",
             "assignee_department",
+            "assignee_department_name",
             "created_by",
+            "created_by_name",
             "due_date",
             "is_overdue",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "status", "created_by", "created_at", "updated_at"]
+
+    def get_assignee_user_name(self, obj) -> str | None:
+        return _user_display_name(obj.assignee_user) if obj.assignee_user_id else None
+
+    def get_assignee_team_name(self, obj) -> str | None:
+        return obj.assignee_team.name if obj.assignee_team_id else None
+
+    def get_assignee_department_name(self, obj) -> str | None:
+        return obj.assignee_department.name if obj.assignee_department_id else None
+
+    def get_created_by_name(self, obj) -> str:
+        return _user_display_name(obj.created_by)
 
     def validate(self, data: dict) -> dict:
         # Enforce "exactly one assignee matching assignee_type" on both create and PATCH.
@@ -75,6 +100,17 @@ class TaskSerializer(serializers.ModelSerializer):
                 # force-null any stale value so the persisted state stays consistent
                 data[field] = None
         return data
+
+
+class TaskStatusSerializer(serializers.ModelSerializer):
+    # overdue is system-managed (flip_overdue_tasks); users pick from the manual lifecycle only.
+    status = serializers.ChoiceField(
+        choices=[Task.Status.NEW, Task.Status.IN_PROGRESS, Task.Status.DONE]
+    )
+
+    class Meta:
+        model = Task
+        fields = ["status"]
 
 
 class TaskLinkSerializer(serializers.ModelSerializer):

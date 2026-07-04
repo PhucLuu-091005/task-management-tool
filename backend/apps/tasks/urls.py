@@ -8,12 +8,14 @@ from apps.tasks.views import (
     TaskLinkListCreateView,
     TaskListCreateView,
     TaskStatsView,
+    TaskStatusView,
 )
 
 urlpatterns = [
     path("", TaskListCreateView.as_view(), name="task-list"),
     path("stats/", TaskStatsView.as_view(), name="task-stats"),
     path("<int:pk>/", TaskDetailView.as_view(), name="task-detail"),
+    path("<int:pk>/status/", TaskStatusView.as_view(), name="task-status"),
     path(
         "<int:task_id>/attachments/",
         TaskAttachmentListCreateView.as_view(),
