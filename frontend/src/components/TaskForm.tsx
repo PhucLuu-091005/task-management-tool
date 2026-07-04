@@ -55,26 +55,46 @@ export default function TaskForm({
     initial?.assignee_department?.toString() ?? "",
   );
 
-  // Non-admins can't list users/teams/departments; offer themselves and their teams.
-  const userChoices = isAdmin
-    ? (users ?? []).map((u) => ({
-        id: u.id,
-        label: `${u.last_name} ${u.first_name}`.trim() || u.username,
-      }))
-    : me
-      ? [
-          {
-            id: me.id,
-            label: `${me.last_name} ${me.first_name}`.trim() || me.username,
-          },
-        ]
-      : [];
-  const teamChoices = isAdmin
-    ? (teams ?? []).map((t) => ({ id: t.id, label: t.name }))
-    : (me?.memberships ?? []).map((m) => ({ id: m.team, label: m.team_name }));
-  const departmentChoices = isAdmin
-    ? (departments ?? []).map((d) => ({ id: d.id, label: d.name }))
-    : [];
+  // Non-admins can't list users/teams/departments; offer themselves and their
+  // teams, plus the task's current assignee so editing never forces a reassignment.
+  function seedInitial(
+    choices: { id: number; label: string }[],
+    id: number | null | undefined,
+    label: string | null | undefined,
+  ) {
+    if (!id || choices.some((c) => c.id === id)) return choices;
+    return [{ id, label: label ?? `#${id}` }, ...choices];
+  }
+
+  const userChoices = seedInitial(
+    isAdmin
+      ? (users ?? []).map((u) => ({
+          id: u.id,
+          label: `${u.last_name} ${u.first_name}`.trim() || u.username,
+        }))
+      : me
+        ? [
+            {
+              id: me.id,
+              label: `${me.last_name} ${me.first_name}`.trim() || me.username,
+            },
+          ]
+        : [],
+    initial?.assignee_user,
+    initial?.assignee_user_name,
+  );
+  const teamChoices = seedInitial(
+    isAdmin
+      ? (teams ?? []).map((t) => ({ id: t.id, label: t.name }))
+      : (me?.memberships ?? []).map((m) => ({ id: m.team, label: m.team_name })),
+    initial?.assignee_team,
+    initial?.assignee_team_name,
+  );
+  const departmentChoices = seedInitial(
+    isAdmin ? (departments ?? []).map((d) => ({ id: d.id, label: d.name })) : [],
+    initial?.assignee_department,
+    initial?.assignee_department_name,
+  );
 
   const typeChoices: { value: AssigneeType; label: string }[] = [
     { value: "user", label: "Cá nhân" },

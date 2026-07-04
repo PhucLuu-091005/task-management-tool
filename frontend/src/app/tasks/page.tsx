@@ -53,8 +53,10 @@ export default function TasksPage() {
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
 
+  // Auth is guarded by session presence only — a failing list fetch is a data
+  // error to render in place, not a reason to bounce the user to /login.
+  useRequireAuth();
   const { data, isPending, isError } = useTasks({ page, search, status, priority });
-  useRequireAuth(isError);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.count / PAGE_SIZE)) : 1;
 
@@ -126,6 +128,10 @@ export default function TasksPage() {
 
         {isPending ? (
           <p className="py-8 text-center text-sm text-zinc-500">Đang tải…</p>
+        ) : isError ? (
+          <p className="py-8 text-center text-sm text-red-600">
+            Không tải được danh sách công việc. Vui lòng thử lại.
+          </p>
         ) : !data || data.results.length === 0 ? (
           <p className="py-8 text-center text-sm text-zinc-500">
             Không có công việc nào.
