@@ -1,3 +1,4 @@
+from django.core.validators import URLValidator
 from rest_framework import serializers
 
 from apps.tasks.constants import (
@@ -74,6 +75,9 @@ class TaskSerializer(serializers.ModelSerializer):
 
 
 class TaskLinkSerializer(serializers.ModelSerializer):
+    # DRF strips model-level URLValidators, so the scheme allowlist must live here.
+    url = serializers.URLField(max_length=500, validators=[URLValidator(schemes=["http", "https"])])
+
     class Meta:
         model = TaskLink
         fields = ["id", "url", "label", "added_by", "created_at"]

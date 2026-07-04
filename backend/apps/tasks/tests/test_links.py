@@ -56,6 +56,15 @@ def test_add_link_rejects_invalid_url(member_client, team, creator):
     assert "url" in res.data
 
 
+def test_add_link_rejects_non_http_scheme(member_client, team, creator):
+    task = _team_task(creator, team)
+
+    res = member_client.post(_list_url(task), {"url": "ftp://files.example.com/spec.pdf"})
+
+    assert res.status_code == 400
+    assert "url" in res.data
+
+
 def test_add_link_requires_url(member_client, team, creator):
     task = _team_task(creator, team)
 
