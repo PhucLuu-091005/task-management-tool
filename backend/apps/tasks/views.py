@@ -12,7 +12,7 @@ from apps.tasks.models import Task
 from apps.tasks.permissions import (
     CanCreateTask,
     CanEditTask,
-    leader_can_assign,
+    can_manage_assignee,
     visible_tasks,
 )
 from apps.tasks.serializers import TaskSerializer
@@ -62,7 +62,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
         user = self.request.user
         if not getattr(user, "is_admin", False):
             data = serializer.validated_data
-            if not leader_can_assign(
+            if not can_manage_assignee(
                 user,
                 assignee_type=data.get("assignee_type"),
                 assignee_user_id=getattr(data.get("assignee_user"), "id", None),

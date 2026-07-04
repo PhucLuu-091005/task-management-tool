@@ -75,6 +75,22 @@ def team_leader(team, leader_user):
 
 
 @pytest.fixture
+def dept_lead(db, department):
+    user = User.objects.create_user(
+        email="deptlead@example.com", username="deptlead", password="Str0ng!Passw0rd"
+    )
+    department.lead = user
+    department.save()
+    return user
+
+
+@pytest.fixture
+def dept_lead_client(api_client, dept_lead):
+    api_client.force_authenticate(user=dept_lead)
+    return api_client
+
+
+@pytest.fixture
 def admin_client(api_client, admin_user):
     api_client.force_authenticate(user=admin_user)
     return api_client

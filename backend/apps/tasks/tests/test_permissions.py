@@ -87,3 +87,23 @@ def test_member_cannot_edit_team_task(make_request, team_member, creator, team):
 def test_admin_can_edit(make_request, admin_user, creator, team):
     task = _team_task(creator, team)
     assert CanEditTask().has_object_permission(make_request(admin_user), None, task) is True
+
+
+def _dept_task(creator, department):
+    return Task.objects.create(
+        title="Dept task",
+        created_by=creator,
+        assignee_type=Task.AssigneeType.DEPARTMENT,
+        assignee_department=department,
+    )
+
+
+def test_team_leader_cannot_edit_department_task(make_request, team_leader, creator, department):
+    # team_leader leads a team in `department` but is not its lead → no authority over dept tasks.
+    task = _dept_task(creator, department)
+    assert CanEditTask().has_object_permission(make_request(team_leader), None, task) is False
+
+
+def test_department_lead_can_edit_department_task(make_request, dept_lead, creator, department):
+    task = _dept_task(creator, department)
+    assert CanEditTask().has_object_permission(make_request(dept_lead), None, task) is True

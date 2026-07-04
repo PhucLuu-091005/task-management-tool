@@ -2,7 +2,7 @@ from django.db.models import Q
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from apps.tasks.models import Task
-from apps.teams.models import TeamMembership
+from apps.teams.models import Department, TeamMembership
 
 
 def _user_team_ids(user):
@@ -19,41 +19,56 @@ def visible_tasks(user):
         | Q(assignee_user=user)
         | Q(assignee_team_id__in=team_ids)
         | Q(assignee_department__teams__id__in=team_ids)
+        # a department lead sees (and so can open/edit) their department's tasks
+        | Q(assignee_department__lead=user)
     ).distinct()
 
 
 def _leads_team(user, team_id):
-    return TeamMembership.objects.filter(
-        user=user, role=TeamMembership.Role.LEADER, team_id=team_id
-    ).exists()
+    return (
+        bool(team_id)
+        and TeamMembership.objects.filter(
+            user=user, role=TeamMembership.Role.LEADER, team_id=team_id
+        ).exists()
+    )
 
 
-def _leads_team_in_department(user, department_id):
-    return TeamMembership.objects.filter(
-        user=user, role=TeamMembership.Role.LEADER, team__department_id=department_id
-    ).exists()
+def _leads_target_users_team(user, target_user_id):
+    if not target_user_id:
+        return False
+    led_team_ids = TeamMembership.objects.filter(
+        user=user, role=TeamMembership.Role.LEADER
+    ).values_list("team_id", flat=True)
+    return TeamMembership.objects.filter(team_id__in=led_team_ids, user_id=target_user_id).exists()
 
 
-def leader_can_assign(
+def _leads_department(user, department_id):
+    return bool(department_id) and Department.objects.filter(id=department_id, lead=user).exists()
+
+
+def _is_any_leader(user):
+    return (
+        TeamMembership.objects.filter(user=user, role=TeamMembership.Role.LEADER).exists()
+        or Department.objects.filter(lead=user).exists()
+    )
+
+
+def can_manage_assignee(
     user, *, assignee_type, assignee_user_id, assignee_team_id, assignee_department_id
 ):
-    """Whether a non-admin may target this assignee (README §5: leaders act within their group)."""
+    """Non-admin authority over a task's assignee (README §5): a team leader manages their own team
+    and its members; a department lead manages department-scoped tasks. Nobody else."""
     if assignee_type == Task.AssigneeType.TEAM:
         return _leads_team(user, assignee_team_id)
-    if assignee_type == Task.AssigneeType.DEPARTMENT:
-        return _leads_team_in_department(user, assignee_department_id)
     if assignee_type == Task.AssigneeType.USER:
-        led_team_ids = TeamMembership.objects.filter(
-            user=user, role=TeamMembership.Role.LEADER
-        ).values_list("team_id", flat=True)
-        return TeamMembership.objects.filter(
-            team_id__in=led_team_ids, user_id=assignee_user_id
-        ).exists()
+        return _leads_target_users_team(user, assignee_user_id)
+    if assignee_type == Task.AssigneeType.DEPARTMENT:
+        return _leads_department(user, assignee_department_id)
     return False
 
 
 class CanCreateTask(BasePermission):
-    """README §5: only admins and team leaders may create/assign tasks; anyone may still read."""
+    """README §5: only admins, team leaders and dept leads may create/assign; anyone may read."""
 
     def has_permission(self, request, view) -> bool:
         user = request.user
@@ -61,9 +76,7 @@ class CanCreateTask(BasePermission):
             return False
         if request.method in SAFE_METHODS:
             return True
-        if getattr(user, "is_admin", False):
-            return True
-        return TeamMembership.objects.filter(user=user, role=TeamMembership.Role.LEADER).exists()
+        return getattr(user, "is_admin", False) or _is_any_leader(user)
 
 
 class CanEditTask(BasePermission):
@@ -77,8 +90,10 @@ class CanEditTask(BasePermission):
             return False
         if getattr(user, "is_admin", False) or obj.created_by_id == user.id:
             return True
-        if obj.assignee_team_id and _leads_team(user, obj.assignee_team_id):
-            return True
-        if obj.assignee_department_id:
-            return _leads_team_in_department(user, obj.assignee_department_id)
-        return False
+        return can_manage_assignee(
+            user,
+            assignee_type=obj.assignee_type,
+            assignee_user_id=obj.assignee_user_id,
+            assignee_team_id=obj.assignee_team_id,
+            assignee_department_id=obj.assignee_department_id,
+        )
