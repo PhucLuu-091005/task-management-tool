@@ -37,6 +37,9 @@ class TaskSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "status", "created_by", "created_at", "updated_at"]
 
     def validate(self, data: dict) -> dict:
+        # Enforce "exactly one assignee matching assignee_type" on both create and PATCH.
+        # On PATCH the payload is partial, so the effective type/assignee is the incoming
+        # value if present, otherwise the value already stored on the instance.
         instance = self.instance
 
         if "assignee_type" in data:

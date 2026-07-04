@@ -16,26 +16,64 @@ def _team_task(creator, team, **kwargs):
     )
 
 
-def test_create_task_sets_created_by(member_client, team_member, team):
-    res = member_client.post(
+def test_leader_creates_task_in_own_team_sets_created_by(leader_client, team_leader, team):
+    res = leader_client.post(
         reverse("task-list"),
         {"title": "New", "assignee_type": "team", "assignee_team": team.id},
         format="json",
     )
     assert res.status_code == 201
     task = Task.objects.get(id=res.data["id"])
-    assert task.created_by == team_member
+    assert task.created_by == team_leader
     assert task.status == Task.Status.NEW
+
+
+def test_member_cannot_create_task(member_client, team):
+    res = member_client.post(
+        reverse("task-list"),
+        {"title": "New", "assignee_type": "team", "assignee_team": team.id},
+        format="json",
+    )
+    assert res.status_code == 403
+
+
+def test_leader_cannot_create_task_for_other_team(leader_client, team_leader, other_team):
+    res = leader_client.post(
+        reverse("task-list"),
+        {"title": "New", "assignee_type": "team", "assignee_team": other_team.id},
+        format="json",
+    )
+    assert res.status_code == 403
+
+
+def test_admin_can_create_task_for_any_team(admin_client, other_team):
+    res = admin_client.post(
+        reverse("task-list"),
+        {"title": "New", "assignee_type": "team", "assignee_team": other_team.id},
+        format="json",
+    )
+    assert res.status_code == 201
+
+
+def test_member_can_retrieve_visible_team_task(member_client, creator, team):
+    task = _team_task(creator, team)
+    res = member_client.get(reverse("task-detail", args=[task.id]))
+    assert res.status_code == 200
+    assert res.data["id"] == task.id
+
+
+def test_title_over_max_length_returns_400(admin_client, team):
+    res = admin_client.post(
+        reverse("task-list"),
+        {"title": "x" * 201, "assignee_type": "team", "assignee_team": team.id},
+        format="json",
+    )
+    assert res.status_code == 400
 
 
 def test_list_scoped_to_visible(member_client, creator, team, other_team):
     _team_task(creator, team, title="Visible")
-    Task.objects.create(
-        title="Hidden",
-        created_by=creator,
-        assignee_type=Task.AssigneeType.TEAM,
-        assignee_team=other_team,
-    )
+    _team_task(creator, other_team, title="Hidden")
     res = member_client.get(reverse("task-list"))
     assert res.status_code == 200
     titles = {t["title"] for t in res.data}
