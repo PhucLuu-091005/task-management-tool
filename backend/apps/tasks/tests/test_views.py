@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 
 from apps.tasks.models import Task
+from apps.teams.models import Department, Team
 
 pytestmark = pytest.mark.django_db
 
@@ -106,6 +107,45 @@ def test_department_lead_can_edit_others_department_task(dept_lead_client, creat
     assert res.status_code == 200
     task.refresh_from_db()
     assert task.title == "Renamed"
+
+
+def test_department_lead_can_create_team_task_in_their_department(dept_lead_client, team):
+    res = dept_lead_client.post(
+        reverse("task-list"),
+        {"title": "New", "assignee_type": "team", "assignee_team": team.id},
+        format="json",
+    )
+    assert res.status_code == 201
+
+
+def test_department_lead_can_create_user_task_for_department_member(dept_lead_client, team_member):
+    res = dept_lead_client.post(
+        reverse("task-list"),
+        {"title": "New", "assignee_type": "user", "assignee_user": team_member.id},
+        format="json",
+    )
+    assert res.status_code == 201
+
+
+def test_department_lead_can_edit_team_task_in_their_department(dept_lead_client, creator, team):
+    task = _team_task(creator, team)
+    res = dept_lead_client.patch(
+        reverse("task-detail", args=[task.id]), {"title": "Renamed"}, format="json"
+    )
+    assert res.status_code == 200
+    task.refresh_from_db()
+    assert task.title == "Renamed"
+
+
+def test_department_lead_cannot_manage_team_in_other_department(dept_lead_client):
+    other_dept = Department.objects.create(name="Sales")
+    foreign_team = Team.objects.create(name="Outside", department=other_dept)
+    res = dept_lead_client.post(
+        reverse("task-list"),
+        {"title": "New", "assignee_type": "team", "assignee_team": foreign_team.id},
+        format="json",
+    )
+    assert res.status_code == 403
 
 
 def test_member_can_retrieve_visible_team_task(member_client, creator, team):

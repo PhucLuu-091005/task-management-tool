@@ -2,7 +2,7 @@ from django.db.models import Q
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from apps.tasks.models import Task
-from apps.teams.models import Department, TeamMembership
+from apps.teams.models import Department, Team, TeamMembership
 
 
 def _user_team_ids(user):
@@ -19,27 +19,41 @@ def visible_tasks(user):
         | Q(assignee_user=user)
         | Q(assignee_team_id__in=team_ids)
         | Q(assignee_department__teams__id__in=team_ids)
-        # a department lead sees (and so can open/edit) their department's tasks
+        # a department lead oversees their whole department: its own tasks, its teams'
+        # tasks, and tasks for members of those teams.
         | Q(assignee_department__lead=user)
+        | Q(assignee_team__department__lead=user)
+        | Q(assignee_user__memberships__team__department__lead=user)
     ).distinct()
 
 
-def _leads_team(user, team_id):
-    return (
-        bool(team_id)
-        and TeamMembership.objects.filter(
-            user=user, role=TeamMembership.Role.LEADER, team_id=team_id
-        ).exists()
-    )
+def _manages_team(user, team_id):
+    """user has authority over a team: they lead it, or they lead its department."""
+    if not team_id:
+        return False
+    if TeamMembership.objects.filter(
+        user=user, role=TeamMembership.Role.LEADER, team_id=team_id
+    ).exists():
+        return True
+    return Team.objects.filter(id=team_id, department__lead=user).exists()
 
 
-def _leads_target_users_team(user, target_user_id):
+def _manages_target_user(user, target_user_id):
+    """target user belongs to a team `user` manages (as team leader or department lead)."""
     if not target_user_id:
         return False
-    led_team_ids = TeamMembership.objects.filter(
-        user=user, role=TeamMembership.Role.LEADER
-    ).values_list("team_id", flat=True)
-    return TeamMembership.objects.filter(team_id__in=led_team_ids, user_id=target_user_id).exists()
+    target_team_ids = list(
+        TeamMembership.objects.filter(user_id=target_user_id).values_list("team_id", flat=True)
+    )
+    if not target_team_ids:
+        return False
+    leads_a_team = TeamMembership.objects.filter(
+        user=user, role=TeamMembership.Role.LEADER, team_id__in=target_team_ids
+    ).exists()
+    leads_their_department = Team.objects.filter(
+        id__in=target_team_ids, department__lead=user
+    ).exists()
+    return leads_a_team or leads_their_department
 
 
 def _leads_department(user, department_id):
@@ -56,12 +70,13 @@ def _is_any_leader(user):
 def can_manage_assignee(
     user, *, assignee_type, assignee_user_id, assignee_team_id, assignee_department_id
 ):
-    """Non-admin authority over a task's assignee (README §5): a team leader manages their own team
-    and its members; a department lead manages department-scoped tasks. Nobody else."""
+    """Non-admin authority over a task's assignee (README §5). A team leader manages their own team
+    and its members; a department lead outranks that and manages the whole department — its teams,
+    their members, and department-scoped tasks. Nobody else."""
     if assignee_type == Task.AssigneeType.TEAM:
-        return _leads_team(user, assignee_team_id)
+        return _manages_team(user, assignee_team_id)
     if assignee_type == Task.AssigneeType.USER:
-        return _leads_target_users_team(user, assignee_user_id)
+        return _manages_target_user(user, assignee_user_id)
     if assignee_type == Task.AssigneeType.DEPARTMENT:
         return _leads_department(user, assignee_department_id)
     return False
