@@ -70,6 +70,25 @@ class Task(models.Model):
         )
 
 
+class TaskLink(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="links")
+    url = models.URLField(max_length=500)
+    label = models.CharField(max_length=200, blank=True)
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="task_links",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"Link #{self.pk} on task {self.task_id}"
+
+
 class TaskAttachment(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="attachments")
     image = models.ImageField(upload_to="task_attachments/%Y/%m/")
