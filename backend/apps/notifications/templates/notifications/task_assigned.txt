@@ -1,0 +1,13 @@
+Xin chào,
+
+Bạn vừa được giao một công việc mới trên hệ thống Task Management.
+
+Công việc: {{ task_title }}
+{% if task_description %}
+Mô tả:
+{{ task_description }}
+{% endif %}
+Vui lòng đăng nhập vào hệ thống để xem chi tiết và bắt đầu thực hiện.
+
+Trân trọng,
+Task Management

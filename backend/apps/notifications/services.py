@@ -4,13 +4,13 @@ import threading
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
+from django.template.loader import render_to_string
 
+from apps.notifications import constants
 from apps.tasks.models import Task
 from apps.teams.models import TeamMembership
 
 logger = logging.getLogger(__name__)
-
-TASK_ASSIGNED_SUBJECT = "Bạn được giao một công việc mới"
 
 
 def recipients_for_assignment(task):
@@ -46,10 +46,14 @@ def notify_task_assignment(task, actor=None) -> int:
     emails = _recipient_emails(task, actor)
     if not emails:
         return 0
-    body = f'Bạn được giao công việc "{task.title}".'
-    # Recipients are resolved here so the worker thread never touches the DB —
+    subject = constants.TASK_ASSIGNED_SUBJECT.format(title=task.title)
+    # Subject/body are rendered here so the worker thread never touches the DB —
     # the task row is already committed (no ATOMIC_REQUESTS).
-    _dispatch(_send_assignment_email, TASK_ASSIGNED_SUBJECT, body, emails)
+    body = render_to_string(
+        constants.TASK_ASSIGNED_TEMPLATE,
+        {"task_title": task.title, "task_description": task.description},
+    )
+    _dispatch(_send_assignment_email, subject, body, emails)
     return len(emails)
 
 

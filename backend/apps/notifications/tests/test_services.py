@@ -21,7 +21,7 @@ def test_user_assignment_emails_assignee(creator, recipient, mailoutbox):
 def test_team_assignment_emails_only_leaders(creator, team, team_leader, team_member, mailoutbox):
     task = _task(creator, assignee_type=Task.AssigneeType.TEAM, assignee_team=team)
     notify_task_assignment(task, actor=creator)
-    assert [m.to for m in mailoutbox] == [[team_leader.email]]  # leader yes, plain member no
+    assert [m.to for m in mailoutbox] == [[team_leader.email]]
 
 
 def test_department_assignment_emails_lead(creator, department, lead_user, mailoutbox):
