@@ -4,6 +4,7 @@ from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 
+from apps.notifications.services import notify_task_assignment
 from apps.tasks.constants import (
     INVALID_FILTER_VALUE_ERROR_MESSAGE,
     NOT_ALLOWED_TO_ASSIGN_ERROR_MESSAGE,
@@ -70,7 +71,8 @@ class TaskListCreateView(generics.ListCreateAPIView):
                 assignee_department_id=getattr(data.get("assignee_department"), "id", None),
             ):
                 raise PermissionDenied(NOT_ALLOWED_TO_ASSIGN_ERROR_MESSAGE)
-        serializer.save(created_by=user)
+        task = serializer.save(created_by=user)
+        notify_task_assignment(task, actor=user)
 
 
 class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -79,3 +81,21 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return visible_tasks(self.request.user)
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        before = (
+            instance.assignee_type,
+            instance.assignee_user_id,
+            instance.assignee_team_id,
+            instance.assignee_department_id,
+        )
+        task = serializer.save()
+        after = (
+            task.assignee_type,
+            task.assignee_user_id,
+            task.assignee_team_id,
+            task.assignee_department_id,
+        )
+        if after != before:
+            notify_task_assignment(task, actor=self.request.user)
