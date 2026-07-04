@@ -28,6 +28,20 @@ services:
       # Mount into container, no need rebuild when change
       - ./backend:/app
 
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      # Keep the image's node_modules; the host's may be built for another OS/arch
+      - /app/node_modules
+
 volumes:
   postgres_data:
 

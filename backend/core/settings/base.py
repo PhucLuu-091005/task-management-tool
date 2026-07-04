@@ -126,7 +126,9 @@ SPECTACULAR_SETTINGS = {
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
 }
 
-CORS_ALLOW_ORIGINS = config("CORS_ALLOW_ORIGINS", default="localhost").split(",")
+# django-cors-headers only reads CORS_ALLOWED_ORIGINS; the old CORS_ALLOW_ORIGINS
+# name was silently ignored, leaving CORS effectively disabled.
+CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="http://localhost:3000").split(",")
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
