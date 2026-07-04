@@ -1,5 +1,5 @@
 from django.db.models import Q
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from apps.tasks.models import Task
 from apps.teams.models import TeamMembership
@@ -10,7 +10,9 @@ def _user_team_ids(user):
 
 
 def visible_tasks(user):
-    qs = Task.objects.all()
+    qs = Task.objects.select_related(
+        "assignee_user", "assignee_team", "assignee_department", "created_by"
+    )
     if getattr(user, "is_admin", False):
         return qs
     team_ids = _user_team_ids(user)
@@ -37,6 +39,15 @@ class CanEditTask(BasePermission):
         if obj.assignee_department_id:
             return obj.assignee_department.teams.filter(id__in=leader_team_ids).exists()
         return False
+
+
+class CanEditTaskOrReadOnly(CanEditTask):
+    """Anyone who can see the task (queryset-scoped) may read it; edits stay gated."""
+
+    def has_object_permission(self, request, view, obj) -> bool:
+        if request.method in SAFE_METHODS:
+            return bool(request.user and request.user.is_authenticated)
+        return super().has_object_permission(request, view, obj)
 
 
 class CanDeleteTaskItem(BasePermission):

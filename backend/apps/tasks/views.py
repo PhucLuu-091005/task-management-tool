@@ -13,8 +13,13 @@ from rest_framework.views import APIView
 from apps.notifications.services import notify_task_assignment
 from apps.tasks.filters import TaskFilter
 from apps.tasks.models import Task
-from apps.tasks.permissions import CanDeleteTaskItem, CanEditTask, visible_tasks
-from apps.tasks.serializers import TaskAttachmentSerializer, TaskLinkSerializer, TaskSerializer
+from apps.tasks.permissions import CanDeleteTaskItem, CanEditTaskOrReadOnly, visible_tasks
+from apps.tasks.serializers import (
+    TaskAttachmentSerializer,
+    TaskLinkSerializer,
+    TaskSerializer,
+    TaskStatusSerializer,
+)
 
 
 class TaskPagination(PageNumberPagination):
@@ -43,7 +48,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
 
 class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TaskSerializer
-    permission_classes = [CanEditTask]
+    permission_classes = [CanEditTaskOrReadOnly]
 
     def get_queryset(self):
         return visible_tasks(self.request.user)
@@ -65,6 +70,22 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
         if after != before:
             notify_task_assignment(task, actor=self.request.user)
+
+
+class TaskStatusView(generics.UpdateAPIView):
+    serializer_class = TaskStatusSerializer
+    http_method_names = ["patch", "options"]
+
+    def get_queryset(self):
+        return visible_tasks(self.request.user)
+
+    @extend_schema(responses=TaskSerializer)
+    def patch(self, request, *args, **kwargs):
+        task = self.get_object()
+        serializer = self.get_serializer(task, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(TaskSerializer(task).data)
 
 
 def _grouped_counts(qs, field, out_key):

@@ -48,6 +48,18 @@ def test_outsider_gets_404_on_detail(outsider_client, creator, team):
     assert res.status_code == 404
 
 
+def test_member_can_view_team_task_detail(member_client, creator, team):
+    task = _team_task(creator, team)
+    res = member_client.get(reverse("task-detail", args=[task.id]))
+    assert res.status_code == 200
+
+
+def test_member_cannot_update_team_task(member_client, creator, team):
+    task = _team_task(creator, team)
+    res = member_client.patch(reverse("task-detail", args=[task.id]), {"title": "changed"})
+    assert res.status_code == 403
+
+
 def test_member_cannot_delete_team_task(member_client, creator, team):
     task = _team_task(creator, team)
     res = member_client.delete(reverse("task-detail", args=[task.id]))
