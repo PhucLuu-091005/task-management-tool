@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 import pytest
+from django.db.models import ProtectedError
 from django.utils import timezone
 
 from apps.tasks.models import Task
@@ -66,8 +67,7 @@ def test_is_overdue_false_when_no_due_date(creator, member_user):
 
 @pytest.mark.django_db
 def test_creator_is_protected_from_delete(creator, member_user):
-    from django.db.models import ProtectedError
-
+    # created_by is PROTECT: authorship is a historical fact, so a user with tasks can't be deleted.
     Task.objects.create(
         title="Owned",
         created_by=creator,
@@ -76,3 +76,17 @@ def test_creator_is_protected_from_delete(creator, member_user):
     )
     with pytest.raises(ProtectedError):
         creator.delete()
+
+
+@pytest.mark.django_db
+def test_deleting_assignee_nulls_the_assignment(creator, member_user):
+    # assignee_* is SET_NULL: an assignment is reassignable, so the task survives unassigned.
+    task = Task.objects.create(
+        title="Assigned",
+        created_by=creator,
+        assignee_type=Task.AssigneeType.USER,
+        assignee_user=member_user,
+    )
+    member_user.delete()
+    task.refresh_from_db()
+    assert task.assignee_user_id is None

@@ -1,11 +1,20 @@
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import generics
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.permissions import IsAuthenticated
 
-from apps.tasks.constants import INVALID_FILTER_VALUE_ERROR_MESSAGE
+from apps.tasks.constants import (
+    INVALID_FILTER_VALUE_ERROR_MESSAGE,
+    NOT_ALLOWED_TO_ASSIGN_ERROR_MESSAGE,
+)
 from apps.tasks.models import Task
-from apps.tasks.permissions import CanEditTask, visible_tasks
+from apps.tasks.permissions import (
+    CanCreateTask,
+    CanEditTask,
+    leader_can_assign,
+    visible_tasks,
+)
 from apps.tasks.serializers import TaskSerializer
 
 _INT_FILTERS = {
@@ -17,6 +26,7 @@ _INT_FILTERS = {
 
 class TaskListCreateView(generics.ListCreateAPIView):
     serializer_class = TaskSerializer
+    permission_classes = [IsAuthenticated, CanCreateTask]
 
     def get_queryset(self):
         qs = visible_tasks(self.request.user)
@@ -49,12 +59,23 @@ class TaskListCreateView(generics.ListCreateAPIView):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        user = self.request.user
+        if not getattr(user, "is_admin", False):
+            data = serializer.validated_data
+            if not leader_can_assign(
+                user,
+                assignee_type=data.get("assignee_type"),
+                assignee_user_id=getattr(data.get("assignee_user"), "id", None),
+                assignee_team_id=getattr(data.get("assignee_team"), "id", None),
+                assignee_department_id=getattr(data.get("assignee_department"), "id", None),
+            ):
+                raise PermissionDenied(NOT_ALLOWED_TO_ASSIGN_ERROR_MESSAGE)
+        serializer.save(created_by=user)
 
 
 class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TaskSerializer
-    permission_classes = [CanEditTask]
+    permission_classes = [IsAuthenticated, CanEditTask]
 
     def get_queryset(self):
         return visible_tasks(self.request.user)
