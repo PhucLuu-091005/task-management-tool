@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend — Next.js
 
-## Getting Started
+Giao diện web của hệ thống quản lý công việc nội bộ: **Next.js 14 (App Router) + TypeScript + Tailwind CSS + axios + React Query**.
 
-First, run the development server:
+## Chạy dev (host)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Backend phải chạy sẵn (mặc định `http://localhost:8000`). Đổi địa chỉ API bằng cách copy `.env.example` → `.env.local` và sửa `NEXT_PUBLIC_API_URL`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Chạy bằng Docker
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Từ thư mục gốc của repo:
 
-## Learn More
+```bash
+docker compose up --build frontend
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Cấu trúc
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├── app/
+│   ├── page.tsx           # Trang chủ (yêu cầu đăng nhập): hồ sơ + nhóm
+│   ├── login/page.tsx     # Đăng nhập
+│   ├── register/page.tsx  # Đăng ký
+│   ├── providers.tsx      # React Query provider
+│   └── layout.tsx
+└── lib/
+    ├── api.ts             # axios client + tự refresh JWT khi 401
+    ├── auth.ts            # login / register / logout
+    ├── auth-storage.ts    # lưu access/refresh token (localStorage)
+    ├── hooks.ts           # useProfile
+    └── types.ts
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Xác thực
 
-## Deploy on Vercel
+Đăng nhập qua `POST /api/users/login/` (SimpleJWT). Access token gắn vào header `Authorization: Bearer …`; khi API trả 401, client tự gọi `POST /api/users/token/refresh` một lần rồi thử lại; refresh hỏng thì xoá token và quay về `/login`. Token lưu ở `localStorage` — chấp nhận cho dự án học tập, production nên cân nhắc cookie `HttpOnly`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Lệnh khác
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build      # build production + type-check
+npm run lint       # ESLint
+```
