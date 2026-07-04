@@ -4,7 +4,7 @@ from apps.tasks.constants import (
     ASSIGNEE_MISMATCH_ERROR_MESSAGE,
     ASSIGNEE_REQUIRED_ERROR_MESSAGE,
 )
-from apps.tasks.models import Task, TaskAttachment
+from apps.tasks.models import Task, TaskAttachment, TaskLink
 from apps.tasks.validators import validate_attachment_size, validate_image_format
 
 _ASSIGNEE_FIELDS = {
@@ -74,6 +74,13 @@ class TaskSerializer(serializers.ModelSerializer):
                 # force-null any stale value so the persisted state stays consistent
                 data[field] = None
         return data
+
+
+class TaskLinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TaskLink
+        fields = ["id", "url", "label", "added_by", "created_at"]
+        read_only_fields = ["id", "added_by", "created_at"]
 
 
 class TaskAttachmentSerializer(serializers.ModelSerializer):

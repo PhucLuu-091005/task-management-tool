@@ -4,6 +4,8 @@ from apps.tasks.views import (
     TaskAttachmentDetailView,
     TaskAttachmentListCreateView,
     TaskDetailView,
+    TaskLinkDetailView,
+    TaskLinkListCreateView,
     TaskListCreateView,
     TaskStatsView,
 )
@@ -21,5 +23,15 @@ urlpatterns = [
         "<int:task_id>/attachments/<int:pk>/",
         TaskAttachmentDetailView.as_view(),
         name="task-attachment-detail",
+    ),
+    path(
+        "<int:task_id>/links/",
+        TaskLinkListCreateView.as_view(),
+        name="task-link-list",
+    ),
+    path(
+        "<int:task_id>/links/<int:pk>/",
+        TaskLinkDetailView.as_view(),
+        name="task-link-detail",
     ),
 ]

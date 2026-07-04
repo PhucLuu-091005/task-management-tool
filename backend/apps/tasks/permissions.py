@@ -114,7 +114,9 @@ class CanEditTask(BasePermission):
         )
 
 
-class CanDeleteAttachment(BasePermission):
+class CanDeleteTaskItem(BasePermission):
+    """Task sub-items (attachments, links): deletable by whoever added them or a task editor."""
+
     def has_object_permission(self, request, view, obj) -> bool:
         user = request.user
         if not (user and user.is_authenticated):
