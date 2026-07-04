@@ -104,7 +104,8 @@ class TaskStatsView(APIView):
         qs = visible_tasks(request.user)
 
         by_status = dict.fromkeys(Task.Status.values, 0)
-        for row in qs.values("status").annotate(count=Count("id", distinct=True)):
+        # order_by() clears Task.Meta.ordering, which would otherwise join the GROUP BY.
+        for row in qs.values("status").annotate(count=Count("id", distinct=True)).order_by():
             by_status[row["status"]] = row["count"]
 
         return Response(

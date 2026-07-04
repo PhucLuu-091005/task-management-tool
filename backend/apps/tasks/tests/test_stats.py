@@ -37,6 +37,18 @@ def test_stats_total_and_by_status(admin_client, creator, team, member_user, dep
     }
 
 
+def test_stats_counts_multiple_tasks_with_same_status(member_client, creator, team, department):
+    # Regression: Task.Meta default ordering leaked into the GROUP BY, splitting
+    # same-status tasks into separate rows so the dict build kept only the last.
+    _task(creator, Task.Status.NEW, team=team)
+    _task(creator, Task.Status.NEW, department=department)
+
+    res = member_client.get(reverse("task-stats"))
+
+    assert res.data["by_status"]["new"] == 2
+    assert res.data["total"] == 2
+
+
 def test_stats_by_status_is_zero_filled(admin_client, creator, team):
     _task(creator, Task.Status.NEW, team=team)
 
