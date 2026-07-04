@@ -107,3 +107,22 @@ def test_team_leader_cannot_edit_department_task(make_request, team_leader, crea
 def test_department_lead_can_edit_department_task(make_request, dept_lead, creator, department):
     task = _dept_task(creator, department)
     assert CanEditTask().has_object_permission(make_request(dept_lead), None, task) is True
+
+
+def test_department_lead_can_edit_team_task_in_department(make_request, dept_lead, creator, team):
+    # A dept lead outranks team leaders: they manage team-scoped tasks inside their department too.
+    task = _team_task(creator, team)
+    assert CanEditTask().has_object_permission(make_request(dept_lead), None, task) is True
+
+
+def test_department_lead_sees_whole_department(dept_lead, creator, team, department, member_user):
+    _team_task(creator, team)
+    _dept_task(creator, department)
+    Task.objects.create(
+        title="User task",
+        created_by=creator,
+        assignee_type=Task.AssigneeType.USER,
+        assignee_user=member_user,
+    )
+    TeamMembership.objects.create(user=member_user, team=team, role=TeamMembership.Role.MEMBER)
+    assert visible_tasks(dept_lead).count() == 3
