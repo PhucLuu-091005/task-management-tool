@@ -17,7 +17,7 @@ import {
 import Header from "@/components/Header";
 import { STATUS_LABELS } from "@/lib/labels";
 import { useProfile, useRequireAuth } from "@/lib/hooks";
-import { useTeams, useUsers } from "@/lib/org";
+import { useDepartments, useTeams, useUsers } from "@/lib/org";
 import { useTaskStats } from "@/lib/stats";
 import { TaskStatus } from "@/lib/types";
 
@@ -38,6 +38,7 @@ export default function DashboardPage() {
   const isAdmin = me?.is_admin ?? false;
   const { data: users } = useUsers(isAdmin);
   const { data: teams } = useTeams(isAdmin);
+  const { data: departments } = useDepartments(isAdmin);
 
   function userName(id: number): string {
     if (me && id === me.id)
@@ -51,6 +52,10 @@ export default function DashboardPage() {
     return (
       fromProfile ?? teams?.find((t) => t.id === id)?.name ?? `Nhóm #${id}`
     );
+  }
+
+  function departmentName(id: number): string {
+    return departments?.find((d) => d.id === id)?.name ?? `Phòng #${id}`;
   }
 
   if (isPending || isError || !stats) {
@@ -81,9 +86,11 @@ export default function DashboardPage() {
   }));
 
   const departmentData = stats.by_department.map((row) => ({
-    name: `Phòng #${row.assignee_department_id}`,
+    name: departmentName(row.assignee_department_id),
     count: row.count,
   }));
+
+  const nonZeroStatus = statusData.filter((r) => r.count > 0);
 
   return (
     <main className="min-h-screen">
@@ -108,18 +115,16 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie
-                  data={statusData.filter((r) => r.count > 0)}
+                  data={nonZeroStatus}
                   dataKey="count"
                   nameKey="name"
                   innerRadius={55}
                   outerRadius={90}
                   isAnimationActive={false}
                 >
-                  {statusData
-                    .filter((r) => r.count > 0)
-                    .map((row) => (
-                      <Cell key={row.status} fill={STATUS_COLORS[row.status]} />
-                    ))}
+                  {nonZeroStatus.map((row) => (
+                    <Cell key={row.status} fill={STATUS_COLORS[row.status]} />
+                  ))}
                 </Pie>
                 <Tooltip />
                 <Legend />
