@@ -1,8 +1,10 @@
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.notifications.services import notify_task_assignment
 from apps.tasks.constants import (
@@ -99,3 +101,37 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
         if after != before:
             notify_task_assignment(task, actor=self.request.user)
+
+
+def _grouped_counts(qs, field, out_key):
+    rows = (
+        qs.filter(**{f"{field}__isnull": False})
+        .values(field)
+        .annotate(count=Count("id", distinct=True))
+        .order_by(field)
+    )
+    return [{out_key: row[field], "count": row["count"]} for row in rows]
+
+
+class TaskStatsView(APIView):
+    def get(self, request):
+        qs = visible_tasks(request.user)
+
+        # Stored `status` is the source of truth: the `overdue` bucket tracks the
+        # flip_overdue_tasks job, not a live due_date check, so a past-due task not
+        # yet flipped still counts under its current status.
+        by_status = dict.fromkeys(Task.Status.values, 0)
+        for row in qs.values("status").annotate(count=Count("id", distinct=True)):
+            by_status[row["status"]] = row["count"]
+
+        return Response(
+            {
+                "total": sum(by_status.values()),
+                "by_status": by_status,
+                "by_assignee_user": _grouped_counts(qs, "assignee_user", "assignee_user_id"),
+                "by_team": _grouped_counts(qs, "assignee_team", "assignee_team_id"),
+                "by_department": _grouped_counts(
+                    qs, "assignee_department", "assignee_department_id"
+                ),
+            }
+        )
