@@ -172,7 +172,7 @@ def test_list_scoped_to_visible(member_client, creator, team, other_team):
     _team_task(creator, other_team, title="Hidden")
     res = member_client.get(reverse("task-list"))
     assert res.status_code == 200
-    titles = {t["title"] for t in res.data}
+    titles = {t["title"] for t in res.data["results"]}
     assert "Visible" in titles and "Hidden" not in titles
 
 
@@ -198,14 +198,14 @@ def test_filter_by_status(admin_client, creator, team):
     _team_task(creator, team, title="New one")
     _team_task(creator, team, title="Done one", status=Task.Status.DONE)
     res = admin_client.get(reverse("task-list"), {"status": "done"})
-    assert [t["title"] for t in res.data] == ["Done one"]
+    assert [t["title"] for t in res.data["results"]] == ["Done one"]
 
 
 def test_search_by_title(admin_client, creator, team):
     _team_task(creator, team, title="Deploy pipeline")
     _team_task(creator, team, title="Write docs")
     res = admin_client.get(reverse("task-list"), {"search": "deploy"})
-    assert [t["title"] for t in res.data] == ["Deploy pipeline"]
+    assert [t["title"] for t in res.data["results"]] == ["Deploy pipeline"]
 
 
 def test_invalid_assignee_user_filter_returns_400(admin_client):
@@ -234,7 +234,7 @@ def test_is_overdue_true_filters_by_stored_status(admin_client, creator, team):
     # Past-due but not yet flipped: stored status is the source of truth, so not overdue.
     _team_task(creator, team, title="Not flipped", status=Task.Status.NEW, due_date=past)
     res = admin_client.get(reverse("task-list"), {"is_overdue": "true"})
-    assert [t["title"] for t in res.data] == ["Flipped"]
+    assert [t["title"] for t in res.data["results"]] == ["Flipped"]
 
 
 def test_is_overdue_false_excludes_stored_overdue(admin_client, creator, team):
@@ -242,7 +242,7 @@ def test_is_overdue_false_excludes_stored_overdue(admin_client, creator, team):
     _team_task(creator, team, title="Flipped", status=Task.Status.OVERDUE, due_date=past)
     _team_task(creator, team, title="Not flipped", status=Task.Status.NEW, due_date=past)
     res = admin_client.get(reverse("task-list"), {"is_overdue": "false"})
-    assert [t["title"] for t in res.data] == ["Not flipped"]
+    assert [t["title"] for t in res.data["results"]] == ["Not flipped"]
 
 
 def test_patch_add_mismatched_assignee_rejected(admin_client, creator, team, member_user):
