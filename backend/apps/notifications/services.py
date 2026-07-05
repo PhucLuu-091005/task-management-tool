@@ -18,13 +18,13 @@ logger = logging.getLogger(__name__)
 REMINDER_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 
 
-def _local_day_bounds(now):
+def _local_day_bounds(now: datetime) -> tuple[datetime, datetime]:
     local = now.astimezone(REMINDER_TZ)
     start = datetime.combine(local.date(), time.min, tzinfo=REMINDER_TZ)
     return start, start + timedelta(days=1)
 
 
-def build_reminder_digests(now=None):
+def build_reminder_digests(now: datetime | None = None) -> dict:
     now = now or timezone.now()
     start, end = _local_day_bounds(now)
     buckets = (
