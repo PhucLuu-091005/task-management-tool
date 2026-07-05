@@ -2,6 +2,11 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from apps.tasks.constants import (
+    TASK_LINK_LABEL_MAX_LENGTH,
+    TASK_LINK_URL_MAX_LENGTH,
+)
+
 
 class Task(models.Model):
     class Status(models.TextChoices):
@@ -72,8 +77,8 @@ class Task(models.Model):
 
 class TaskLink(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="links")
-    url = models.URLField(max_length=500)
-    label = models.CharField(max_length=200, blank=True)
+    url = models.URLField(max_length=TASK_LINK_URL_MAX_LENGTH)
+    label = models.CharField(max_length=TASK_LINK_LABEL_MAX_LENGTH, blank=True)
     added_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,

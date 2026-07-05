@@ -4,6 +4,7 @@ from rest_framework import serializers
 from apps.tasks.constants import (
     ASSIGNEE_MISMATCH_ERROR_MESSAGE,
     ASSIGNEE_REQUIRED_ERROR_MESSAGE,
+    TASK_LINK_URL_MAX_LENGTH,
 )
 from apps.tasks.models import Task, TaskAttachment, TaskLink
 from apps.tasks.validators import validate_attachment_size, validate_image_format
@@ -79,7 +80,10 @@ class TaskSerializer(serializers.ModelSerializer):
 
 class TaskLinkSerializer(serializers.ModelSerializer):
     # DRF strips model-level URLValidators, so the scheme allowlist must live here.
-    url = serializers.URLField(max_length=500, validators=[URLValidator(schemes=["http", "https"])])
+    url = serializers.URLField(
+        max_length=TASK_LINK_URL_MAX_LENGTH,
+        validators=[URLValidator(schemes=["http", "https"])],
+    )
 
     class Meta:
         model = TaskLink
