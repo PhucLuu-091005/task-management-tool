@@ -4,6 +4,7 @@ from rest_framework import serializers
 from apps.tasks.constants import (
     ASSIGNEE_MISMATCH_ERROR_MESSAGE,
     ASSIGNEE_REQUIRED_ERROR_MESSAGE,
+    MANUAL_STATUSES,
 )
 from apps.tasks.models import Task, TaskAttachment, TaskLink
 from apps.tasks.validators import validate_attachment_size, validate_image_format
@@ -104,9 +105,7 @@ class TaskSerializer(serializers.ModelSerializer):
 
 class TaskStatusSerializer(serializers.ModelSerializer):
     # overdue is system-managed (flip_overdue_tasks); users pick from the manual lifecycle only.
-    status = serializers.ChoiceField(
-        choices=[Task.Status.NEW, Task.Status.IN_PROGRESS, Task.Status.DONE]
-    )
+    status = serializers.ChoiceField(choices=MANUAL_STATUSES)
 
     class Meta:
         model = Task

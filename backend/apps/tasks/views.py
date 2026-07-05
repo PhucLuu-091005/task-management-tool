@@ -94,6 +94,10 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class TaskStatusView(generics.UpdateAPIView):
     serializer_class = TaskStatusSerializer
+    # Status-update authz is intentionally visibility-scoped (any member of the
+    # assigned team/department may advance status), not CanEditTask like other task
+    # mutations. get_object() through visible_tasks() is the only gate — keep it that way.
+    permission_classes = [IsAuthenticated]
     http_method_names = ["patch", "options"]
 
     def get_queryset(self):

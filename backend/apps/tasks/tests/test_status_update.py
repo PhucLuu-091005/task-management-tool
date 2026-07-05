@@ -5,17 +5,9 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.tasks.models import Task
+from apps.tasks.tests.helpers import team_task
 
 pytestmark = pytest.mark.django_db
-
-
-def _team_task(creator, team):
-    return Task.objects.create(
-        title="Task",
-        created_by=creator,
-        assignee_type=Task.AssigneeType.TEAM,
-        assignee_team=team,
-    )
 
 
 def _url(task):
@@ -23,7 +15,7 @@ def _url(task):
 
 
 def test_assigned_team_member_updates_status(member_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = member_client.patch(_url(task), {"status": "in_progress"})
 
@@ -48,7 +40,7 @@ def test_direct_user_assignee_updates_status(member_client, team_member, creator
 
 
 def test_creator_updates_status(creator_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = creator_client.patch(_url(task), {"status": "done"})
 
@@ -56,7 +48,7 @@ def test_creator_updates_status(creator_client, team, creator):
 
 
 def test_response_is_full_task(member_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = member_client.patch(_url(task), {"status": "in_progress"})
 
@@ -67,13 +59,7 @@ def test_response_is_full_task(member_client, team, creator):
 
 
 def test_overdue_task_can_be_completed(member_client, team, creator):
-    task = Task.objects.create(
-        title="Task",
-        created_by=creator,
-        assignee_type=Task.AssigneeType.TEAM,
-        assignee_team=team,
-        due_date=timezone.now() - timedelta(days=1),
-    )
+    task = team_task(creator, team, due_date=timezone.now() - timedelta(days=1))
     Task.objects.filter(id=task.id).update(status=Task.Status.OVERDUE)
 
     res = member_client.patch(_url(task), {"status": "done"})
@@ -99,7 +85,7 @@ def test_department_member_updates_status(member_client, team, department, creat
 
 
 def test_cannot_set_overdue_manually(member_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = member_client.patch(_url(task), {"status": "overdue"})
 
@@ -110,7 +96,7 @@ def test_cannot_set_overdue_manually(member_client, team, creator):
 
 
 def test_invalid_status_is_rejected(member_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = member_client.patch(_url(task), {"status": "finished"})
 
@@ -119,7 +105,7 @@ def test_invalid_status_is_rejected(member_client, team, creator):
 
 
 def test_missing_status_is_rejected(member_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = member_client.patch(_url(task), {})
 
@@ -128,12 +114,7 @@ def test_missing_status_is_rejected(member_client, team, creator):
 
 
 def test_hidden_task_is_404(member_client, other_team, creator):
-    hidden = Task.objects.create(
-        title="Task",
-        created_by=creator,
-        assignee_type=Task.AssigneeType.TEAM,
-        assignee_team=other_team,
-    )
+    hidden = team_task(creator, other_team)
 
     res = member_client.patch(_url(hidden), {"status": "done"})
 
@@ -141,7 +122,7 @@ def test_hidden_task_is_404(member_client, other_team, creator):
 
 
 def test_unauthenticated_cannot_update_status(api_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = api_client.patch(_url(task), {"status": "done"})
 
@@ -149,7 +130,7 @@ def test_unauthenticated_cannot_update_status(api_client, team, creator):
 
 
 def test_status_ignores_other_fields(member_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = member_client.patch(_url(task), {"status": "done", "title": "hijacked"})
 

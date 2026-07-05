@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 
 from apps.tasks.models import Task
+from apps.tasks.tests.helpers import team_task
 
 User = get_user_model()
 
@@ -14,12 +15,7 @@ def _detail(task):
 
 
 def test_team_task_exposes_team_name(member_client, team, creator):
-    task = Task.objects.create(
-        title="Task",
-        created_by=creator,
-        assignee_type=Task.AssigneeType.TEAM,
-        assignee_team=team,
-    )
+    task = team_task(creator, team)
 
     res = member_client.get(_detail(task))
 
@@ -76,12 +72,7 @@ def test_user_display_name_falls_back_to_username(creator_client, creator, membe
 
 
 def test_created_by_name_is_exposed(creator_client, team, creator):
-    task = Task.objects.create(
-        title="Task",
-        created_by=creator,
-        assignee_type=Task.AssigneeType.TEAM,
-        assignee_team=team,
-    )
+    task = team_task(creator, team)
 
     res = creator_client.get(_detail(task))
 
@@ -89,12 +80,7 @@ def test_created_by_name_is_exposed(creator_client, team, creator):
 
 
 def test_list_includes_display_names(member_client, team, creator):
-    Task.objects.create(
-        title="Task",
-        created_by=creator,
-        assignee_type=Task.AssigneeType.TEAM,
-        assignee_team=team,
-    )
+    team_task(creator, team)
 
     res = member_client.get(reverse("task-list"))
 
