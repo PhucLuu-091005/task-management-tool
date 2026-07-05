@@ -48,6 +48,32 @@ def build_reminder_digests(now=None):
     return digests
 
 
+def _task_url(task):
+    return f"{settings.FRONTEND_URL}{constants.TASK_DETAIL_PATH.format(id=task.id)}"
+
+
+def send_task_reminders(now=None) -> int:
+    sent = 0
+    for user, buckets in build_reminder_digests(now).items():
+        body = render_to_string(
+            constants.TASK_REMINDER_TEMPLATE,
+            {
+                "due_today": [
+                    {"title": t.title, "url": _task_url(t)} for t in buckets["due_today"]
+                ],
+                "overdue": [{"title": t.title, "url": _task_url(t)} for t in buckets["overdue"]],
+            },
+        )
+        try:
+            send_mail(
+                constants.TASK_REMINDER_SUBJECT, body, settings.DEFAULT_FROM_EMAIL, [user.email]
+            )
+            sent += 1
+        except Exception:
+            logger.exception("Failed to send task-reminder email to %s", user.email)
+    return sent
+
+
 def recipients_for_assignment(task):
     if task.assignee_type == Task.AssigneeType.USER:
         return [task.assignee_user] if task.assignee_user_id else []
