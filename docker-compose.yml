@@ -28,6 +28,20 @@ services:
       # Mount into container, no need rebuild when change
       - ./backend:/app
 
+  cron:
+    build: ./backend
+    restart: unless-stopped
+    command: ["supercronic", "/app/deploy/crontab"]
+    env_file:
+      - ./backend/.env
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
 volumes:
   postgres_data:
 
