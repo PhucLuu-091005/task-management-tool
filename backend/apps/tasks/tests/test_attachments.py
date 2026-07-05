@@ -101,6 +101,19 @@ def test_upload_rejects_disallowed_format(member_client, team, creator):
     assert res.status_code == 400
 
 
+def test_upload_rejects_overlong_caption(member_client, team, creator):
+    task = _team_task(creator, team)
+
+    res = member_client.post(
+        _list_url(task),
+        {"image": _image_upload(), "caption": "x" * 201},
+        format="multipart",
+    )
+
+    assert res.status_code == 400
+    assert "caption" in res.data
+
+
 def test_attachments_scoped_to_visible_task(member_client, other_team, creator):
     hidden = _team_task(creator, other_team)
 

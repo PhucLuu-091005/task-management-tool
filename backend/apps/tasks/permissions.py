@@ -116,6 +116,10 @@ class CanEditTask(BasePermission):
 
 class CanDeleteAttachment(BasePermission):
     def has_object_permission(self, request, view, obj) -> bool:
-        if obj.added_by_id == request.user.id:
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        # Guard against a SET_NULL'd uploader: None == None must not grant delete.
+        if obj.added_by_id is not None and obj.added_by_id == user.id:
             return True
         return CanEditTask().has_object_permission(request, view, obj.task)
