@@ -1,5 +1,4 @@
 from django.db.models import Count, Q
-from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics
@@ -55,7 +54,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
 
         is_overdue = params.get("is_overdue")
         if is_overdue in {"true", "false"}:
-            overdue_q = Q(due_date__lt=timezone.now()) & ~Q(status=Task.Status.DONE)
+            overdue_q = Q(status=Task.Status.OVERDUE)
             qs = qs.filter(overdue_q) if is_overdue == "true" else qs.exclude(overdue_q)
 
         if search := params.get("search"):
