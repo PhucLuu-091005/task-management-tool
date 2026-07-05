@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.tasks.models import Task
 from apps.teams.models import Department, Team
@@ -223,6 +226,23 @@ def test_patch_change_type_nulls_stale_assignee(admin_client, creator, team, mem
     assert task.assignee_type == Task.AssigneeType.USER
     assert task.assignee_user_id == member_user.id
     assert task.assignee_team_id is None
+
+
+def test_is_overdue_true_filters_by_stored_status(admin_client, creator, team):
+    past = timezone.now() - timedelta(days=1)
+    _team_task(creator, team, title="Flipped", status=Task.Status.OVERDUE, due_date=past)
+    # Past-due but not yet flipped: stored status is the source of truth, so not overdue.
+    _team_task(creator, team, title="Not flipped", status=Task.Status.NEW, due_date=past)
+    res = admin_client.get(reverse("task-list"), {"is_overdue": "true"})
+    assert [t["title"] for t in res.data] == ["Flipped"]
+
+
+def test_is_overdue_false_excludes_stored_overdue(admin_client, creator, team):
+    past = timezone.now() - timedelta(days=1)
+    _team_task(creator, team, title="Flipped", status=Task.Status.OVERDUE, due_date=past)
+    _team_task(creator, team, title="Not flipped", status=Task.Status.NEW, due_date=past)
+    res = admin_client.get(reverse("task-list"), {"is_overdue": "false"})
+    assert [t["title"] for t in res.data] == ["Not flipped"]
 
 
 def test_patch_add_mismatched_assignee_rejected(admin_client, creator, team, member_user):
