@@ -17,12 +17,16 @@ from apps.tasks.filters import TaskFilter
 from apps.tasks.models import Task, TaskAttachment
 from apps.tasks.permissions import (
     CanCreateTask,
-    CanDeleteAttachment,
+    CanDeleteTaskItem,
     CanEditTask,
     can_manage_assignee,
     visible_tasks,
 )
-from apps.tasks.serializers import TaskAttachmentSerializer, TaskSerializer
+from apps.tasks.serializers import (
+    TaskAttachmentSerializer,
+    TaskLinkSerializer,
+    TaskSerializer,
+)
 
 
 class TaskPagination(PageNumberPagination):
@@ -141,7 +145,7 @@ class TaskAttachmentListCreateView(generics.ListCreateAPIView):
 
 class TaskAttachmentDetailView(generics.DestroyAPIView):
     serializer_class = TaskAttachmentSerializer
-    permission_classes = [IsAuthenticated, CanDeleteAttachment]
+    permission_classes = [IsAuthenticated, CanDeleteTaskItem]
 
     def get_queryset(self):
         # Schema generation introspects the queryset with an anonymous fake view and no kwargs.
@@ -149,3 +153,26 @@ class TaskAttachmentDetailView(generics.DestroyAPIView):
             return TaskAttachment.objects.none()
         task = get_object_or_404(visible_tasks(self.request.user), pk=self.kwargs["task_id"])
         return task.attachments.all()
+
+
+class TaskLinkListCreateView(generics.ListCreateAPIView):
+    serializer_class = TaskLinkSerializer
+    pagination_class = None
+
+    def _task(self):
+        return get_object_or_404(visible_tasks(self.request.user), pk=self.kwargs["task_id"])
+
+    def get_queryset(self):
+        return self._task().links.all()
+
+    def perform_create(self, serializer):
+        serializer.save(task=self._task(), added_by=self.request.user)
+
+
+class TaskLinkDetailView(generics.DestroyAPIView):
+    serializer_class = TaskLinkSerializer
+    permission_classes = [IsAuthenticated, CanDeleteTaskItem]
+
+    def get_queryset(self):
+        task = get_object_or_404(visible_tasks(self.request.user), pk=self.kwargs["task_id"])
+        return task.links.all()

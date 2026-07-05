@@ -5,23 +5,14 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.tasks.models import Task
+from apps.tasks.tests.helpers import team_task
 
 pytestmark = pytest.mark.django_db
 
 
-def _team_task(creator, team, **kwargs):
-    return Task.objects.create(
-        title=kwargs.pop("title", "Task"),
-        created_by=creator,
-        assignee_type=Task.AssigneeType.TEAM,
-        assignee_team=team,
-        **kwargs,
-    )
-
-
 def test_list_is_paginated(admin_client, creator, team):
-    _team_task(creator, team, title="A")
-    _team_task(creator, team, title="B")
+    team_task(creator, team, title="A")
+    team_task(creator, team, title="B")
 
     res = admin_client.get(reverse("task-list"))
 
@@ -31,8 +22,8 @@ def test_list_is_paginated(admin_client, creator, team):
 
 
 def test_filter_by_priority(admin_client, creator, team):
-    _team_task(creator, team, title="urgent", priority=Task.Priority.HIGH)
-    _team_task(creator, team, title="meh", priority=Task.Priority.LOW)
+    team_task(creator, team, title="urgent", priority=Task.Priority.HIGH)
+    team_task(creator, team, title="meh", priority=Task.Priority.LOW)
 
     res = admin_client.get(reverse("task-list"), {"priority": Task.Priority.HIGH})
 
@@ -41,9 +32,9 @@ def test_filter_by_priority(admin_client, creator, team):
 
 def test_filter_by_is_overdue(admin_client, creator, team):
     past = timezone.now() - timedelta(days=1)
-    _team_task(creator, team, title="late", status=Task.Status.OVERDUE, due_date=past)
+    team_task(creator, team, title="late", status=Task.Status.OVERDUE, due_date=past)
     # Past-due but not yet flipped by the job: stored status wins, so not overdue.
-    _team_task(creator, team, title="pending", status=Task.Status.NEW, due_date=past)
+    team_task(creator, team, title="pending", status=Task.Status.NEW, due_date=past)
 
     res = admin_client.get(reverse("task-list"), {"is_overdue": "true"})
 
@@ -51,8 +42,8 @@ def test_filter_by_is_overdue(admin_client, creator, team):
 
 
 def test_search_matches_description(admin_client, creator, team):
-    _team_task(creator, team, title="Ticket", description="kubernetes rollout plan")
-    _team_task(creator, team, title="Other", description="nothing relevant")
+    team_task(creator, team, title="Ticket", description="kubernetes rollout plan")
+    team_task(creator, team, title="Other", description="nothing relevant")
 
     res = admin_client.get(reverse("task-list"), {"search": "kubernetes"})
 
@@ -67,7 +58,7 @@ def test_invalid_choice_filter_returns_400(admin_client):
 
 def test_pagination_paginates_beyond_one_page(admin_client, creator, team):
     for i in range(25):
-        _team_task(creator, team, title=f"T{i:02d}")
+        team_task(creator, team, title=f"T{i:02d}")
 
     page1 = admin_client.get(reverse("task-list"))
     assert page1.data["count"] == 25

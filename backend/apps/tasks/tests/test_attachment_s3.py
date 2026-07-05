@@ -3,7 +3,8 @@ import pytest
 from moto import mock_aws
 
 from apps.tasks.models import TaskAttachment
-from apps.tasks.tests.test_attachments import _image_upload, _list_url, _team_task
+from apps.tasks.tests.helpers import team_task
+from apps.tasks.tests.test_attachments import _image_upload, _list_url
 
 pytestmark = pytest.mark.django_db
 
@@ -36,7 +37,7 @@ def s3_bucket(settings, monkeypatch):
 
 
 def test_attachment_uploads_to_s3(member_client, team, creator, s3_bucket):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = member_client.post(_list_url(task), {"image": _image_upload()}, format="multipart")
 
@@ -47,7 +48,7 @@ def test_attachment_uploads_to_s3(member_client, team, creator, s3_bucket):
 
 
 def test_attachment_url_is_presigned(member_client, team, creator, s3_bucket):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     res = member_client.post(_list_url(task), {"image": _image_upload()}, format="multipart")
 
     url = TaskAttachment.objects.get(id=res.data["id"]).image.url
