@@ -27,6 +27,22 @@ services:
     volumes:
       # Mount into container, no need rebuild when change
       - ./backend:/app
+      - /app/.venv
+
+  cron:
+    build: ./backend
+    restart: unless-stopped
+    command: ["sh", "-c", "uv run python manage.py migrate --noinput && exec supercronic /app/deploy/crontab"]
+    env_file:
+      - ./backend/.env
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/.venv
 
 volumes:
   postgres_data:

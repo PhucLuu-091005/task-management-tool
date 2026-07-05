@@ -1,0 +1,12 @@
+Xin chào,
+
+Đây là nhắc nhở công việc hằng ngày từ hệ thống Task Management.
+{% if due_today %}
+== Đến hạn hôm nay ==
+{% for task in due_today %}- {{ task.title }}: {{ task.url }}
+{% endfor %}{% endif %}{% if overdue %}
+== Quá hạn ==
+{% for task in overdue %}- {{ task.title }}: {{ task.url }}
+{% endfor %}{% endif %}
+Trân trọng,
+Task Management

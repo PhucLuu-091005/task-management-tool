@@ -1,16 +1,110 @@
 import logging
 import threading
+from datetime import datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from django.utils import timezone
 
 from apps.notifications import constants
 from apps.tasks.models import Task
 from apps.teams.models import TeamMembership
 
 logger = logging.getLogger(__name__)
+
+REMINDER_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+
+
+def _local_day_bounds(now: datetime) -> tuple[datetime, datetime]:
+    local = now.astimezone(REMINDER_TZ)
+    start = datetime.combine(local.date(), time.min, tzinfo=REMINDER_TZ)
+    return start, start + timedelta(days=1)
+
+
+def build_reminder_digests(now: datetime | None = None) -> dict:
+    now = now or timezone.now()
+    start, end = _local_day_bounds(now)
+    buckets = (
+        (
+            "due_today",
+            Task.objects.filter(
+                status__in=[Task.Status.NEW, Task.Status.IN_PROGRESS],
+                due_date__gte=start,
+                due_date__lt=end,
+            ).select_related("assignee_user", "assignee_department__lead"),
+        ),
+        (
+            "overdue",
+            Task.objects.filter(status=Task.Status.OVERDUE).select_related(
+                "assignee_user", "assignee_department__lead"
+            ),
+        ),
+    )
+    bucketed = [(name, list(qs)) for name, qs in buckets]
+    leaders_by_team = _team_leaders(
+        task.assignee_team_id
+        for _, tasks in bucketed
+        for task in tasks
+        if task.assignee_type == Task.AssigneeType.TEAM
+    )
+    digests: dict = {}
+    for name, tasks in bucketed:
+        for task in tasks:
+            for user in _digest_recipients(task, leaders_by_team):
+                if user is None or not user.email:
+                    continue
+                digests.setdefault(user, {"due_today": [], "overdue": []})[name].append(task)
+    return digests
+
+
+def _team_leaders(team_ids) -> dict:
+    ids = {tid for tid in team_ids if tid}
+    if not ids:
+        return {}
+    memberships = TeamMembership.objects.filter(
+        team_id__in=ids, role=TeamMembership.Role.LEADER
+    ).select_related("user")
+    leaders: dict = {}
+    for membership in memberships:
+        leaders.setdefault(membership.team_id, []).append(membership.user)
+    return leaders
+
+
+def _digest_recipients(task, leaders_by_team) -> list:
+    # USER/DEPARTMENT are resolved via select_related (no extra query); TEAM leaders
+    # are batched into one query up front rather than one lookup per task.
+    if task.assignee_type == Task.AssigneeType.TEAM:
+        return leaders_by_team.get(task.assignee_team_id, [])
+    return recipients_for_assignment(task)
+
+
+def _task_url(task):
+    return f"{settings.FRONTEND_URL}{constants.TASK_DETAIL_PATH.format(id=task.id)}"
+
+
+def send_task_reminders(now=None) -> int:
+    sent = 0
+    for user, buckets in build_reminder_digests(now).items():
+        body = render_to_string(
+            constants.TASK_REMINDER_TEMPLATE,
+            {
+                "due_today": [
+                    {"title": t.title, "url": _task_url(t)} for t in buckets["due_today"]
+                ],
+                "overdue": [{"title": t.title, "url": _task_url(t)} for t in buckets["overdue"]],
+            },
+        )
+        try:
+            send_mail(
+                constants.TASK_REMINDER_SUBJECT, body, settings.DEFAULT_FROM_EMAIL, [user.email]
+            )
+            sent += 1
+        except Exception:
+            logger.exception("Failed to send task-reminder email to %s", user.email)
+    return sent
 
 
 def recipients_for_assignment(task):

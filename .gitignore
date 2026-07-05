@@ -18,5 +18,10 @@ ROADMAP.md
 
 # Local-only Claude Code skills (kept out of git and CI)
 .claude/skills/explain/
+
+# Superpowers docs (specs + plans) are local-only — never committed
+docs/superpowers/
+.superpowers/
+
 # Uploaded media (dev)
 backend/media/
