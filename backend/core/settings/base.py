@@ -129,8 +129,9 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "REST API for the internal task management system.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
-    # Pin docs as public explicitly so a future drf-spectacular default change can't gate them.
-    "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
+    # Require auth by default so the API surface is never exposed to anonymous users;
+    # development.py opens the docs for local convenience.
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAuthenticated"],
 }
 
 CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="http://localhost:3000").split(",")
