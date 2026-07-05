@@ -34,18 +34,51 @@ def build_reminder_digests(now: datetime | None = None) -> dict:
                 status__in=[Task.Status.NEW, Task.Status.IN_PROGRESS],
                 due_date__gte=start,
                 due_date__lt=end,
+            ).select_related("assignee_user", "assignee_department__lead"),
+        ),
+        (
+            "overdue",
+            Task.objects.filter(status=Task.Status.OVERDUE).select_related(
+                "assignee_user", "assignee_department__lead"
             ),
         ),
-        ("overdue", Task.objects.filter(status=Task.Status.OVERDUE)),
+    )
+    bucketed = [(name, list(qs)) for name, qs in buckets]
+    leaders_by_team = _team_leaders(
+        task.assignee_team_id
+        for _, tasks in bucketed
+        for task in tasks
+        if task.assignee_type == Task.AssigneeType.TEAM
     )
     digests: dict = {}
-    for name, qs in buckets:
-        for task in qs:
-            for user in recipients_for_assignment(task):
+    for name, tasks in bucketed:
+        for task in tasks:
+            for user in _digest_recipients(task, leaders_by_team):
                 if user is None or not user.email:
                     continue
                 digests.setdefault(user, {"due_today": [], "overdue": []})[name].append(task)
     return digests
+
+
+def _team_leaders(team_ids) -> dict:
+    ids = {tid for tid in team_ids if tid}
+    if not ids:
+        return {}
+    memberships = TeamMembership.objects.filter(
+        team_id__in=ids, role=TeamMembership.Role.LEADER
+    ).select_related("user")
+    leaders: dict = {}
+    for membership in memberships:
+        leaders.setdefault(membership.team_id, []).append(membership.user)
+    return leaders
+
+
+def _digest_recipients(task, leaders_by_team) -> list:
+    # USER/DEPARTMENT are resolved via select_related (no extra query); TEAM leaders
+    # are batched into one query up front rather than one lookup per task.
+    if task.assignee_type == Task.AssigneeType.TEAM:
+        return leaders_by_team.get(task.assignee_team_id, [])
+    return recipients_for_assignment(task)
 
 
 def _task_url(task):

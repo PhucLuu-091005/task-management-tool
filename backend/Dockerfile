@@ -4,7 +4,9 @@ WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-ARG TARGETARCH
+# TARGETARCH is auto-populated by BuildKit/buildx; default it so a legacy
+# (DOCKER_BUILDKIT=0) build doesn't produce an empty supercronic-linux- URL.
+ARG TARGETARCH=amd64
 ARG SUPERCRONIC_VERSION=v0.2.33
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl \
