@@ -1,16 +1,51 @@
 import logging
 import threading
+from datetime import datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from django.utils import timezone
 
 from apps.notifications import constants
 from apps.tasks.models import Task
 from apps.teams.models import TeamMembership
 
 logger = logging.getLogger(__name__)
+
+REMINDER_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+
+
+def _local_day_bounds(now):
+    local = now.astimezone(REMINDER_TZ)
+    start = datetime.combine(local.date(), time.min, tzinfo=REMINDER_TZ)
+    return start, start + timedelta(days=1)
+
+
+def build_reminder_digests(now=None):
+    now = now or timezone.now()
+    start, end = _local_day_bounds(now)
+    buckets = (
+        (
+            "due_today",
+            Task.objects.filter(
+                status__in=[Task.Status.NEW, Task.Status.IN_PROGRESS],
+                due_date__gte=start,
+                due_date__lt=end,
+            ),
+        ),
+        ("overdue", Task.objects.filter(status=Task.Status.OVERDUE)),
+    )
+    digests: dict = {}
+    for name, qs in buckets:
+        for task in qs:
+            for user in recipients_for_assignment(task):
+                if user is None or not user.email:
+                    continue
+                digests.setdefault(user, {"due_today": [], "overdue": []})[name].append(task)
+    return digests
 
 
 def recipients_for_assignment(task):
