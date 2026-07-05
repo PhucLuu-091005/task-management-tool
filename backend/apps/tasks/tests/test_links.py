@@ -1,18 +1,10 @@
 import pytest
 from django.urls import reverse
 
-from apps.tasks.models import Task, TaskLink
+from apps.tasks.models import TaskLink
+from apps.tasks.tests.helpers import team_task
 
 pytestmark = pytest.mark.django_db
-
-
-def _team_task(creator, team):
-    return Task.objects.create(
-        title="Task",
-        created_by=creator,
-        assignee_type=Task.AssigneeType.TEAM,
-        assignee_team=team,
-    )
 
 
 def _list_url(task):
@@ -24,7 +16,7 @@ def _detail_url(task, link):
 
 
 def test_add_link(member_client, team_member, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = member_client.post(
         _list_url(task), {"url": "https://docs.example.com/spec", "label": "Spec"}
@@ -39,7 +31,7 @@ def test_add_link(member_client, team_member, team, creator):
 
 
 def test_label_is_optional(member_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = member_client.post(_list_url(task), {"url": "https://example.com"})
 
@@ -48,7 +40,7 @@ def test_label_is_optional(member_client, team, creator):
 
 
 def test_add_link_rejects_invalid_url(member_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = member_client.post(_list_url(task), {"url": "not a url"})
 
@@ -57,7 +49,7 @@ def test_add_link_rejects_invalid_url(member_client, team, creator):
 
 
 def test_add_link_rejects_non_http_scheme(member_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = member_client.post(_list_url(task), {"url": "ftp://files.example.com/spec.pdf"})
 
@@ -66,7 +58,7 @@ def test_add_link_rejects_non_http_scheme(member_client, team, creator):
 
 
 def test_add_link_requires_url(member_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = member_client.post(_list_url(task), {"label": "no url"})
 
@@ -75,7 +67,7 @@ def test_add_link_requires_url(member_client, team, creator):
 
 
 def test_accepts_long_urls(member_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     url = "https://example.com/" + "a" * 300
 
     res = member_client.post(_list_url(task), {"url": url})
@@ -84,7 +76,7 @@ def test_accepts_long_urls(member_client, team, creator):
 
 
 def test_list_links_newest_first(member_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     TaskLink.objects.create(task=task, added_by=creator, url="https://a.example.com")
     TaskLink.objects.create(task=task, added_by=creator, url="https://b.example.com")
 
@@ -98,7 +90,7 @@ def test_list_links_newest_first(member_client, team, creator):
 
 
 def test_links_scoped_to_visible_task(member_client, other_team, creator):
-    hidden = _team_task(creator, other_team)
+    hidden = team_task(creator, other_team)
 
     res = member_client.get(_list_url(hidden))
 
@@ -106,7 +98,7 @@ def test_links_scoped_to_visible_task(member_client, other_team, creator):
 
 
 def test_add_link_on_hidden_task_is_404(member_client, other_team, creator):
-    hidden = _team_task(creator, other_team)
+    hidden = team_task(creator, other_team)
 
     res = member_client.post(_list_url(hidden), {"url": "https://example.com"})
 
@@ -114,7 +106,7 @@ def test_add_link_on_hidden_task_is_404(member_client, other_team, creator):
 
 
 def test_adder_can_delete_own_link(member_client, team_member, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     link = TaskLink.objects.create(task=task, added_by=team_member, url="https://example.com")
 
     res = member_client.delete(_detail_url(task, link))
@@ -124,7 +116,7 @@ def test_adder_can_delete_own_link(member_client, team_member, team, creator):
 
 
 def test_member_cannot_delete_others_link(member_client, team, creator, admin_user):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     link = TaskLink.objects.create(task=task, added_by=admin_user, url="https://example.com")
 
     res = member_client.delete(_detail_url(task, link))
@@ -133,7 +125,7 @@ def test_member_cannot_delete_others_link(member_client, team, creator, admin_us
 
 
 def test_leader_can_delete_any_link(leader_client, team, creator, admin_user):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     link = TaskLink.objects.create(task=task, added_by=admin_user, url="https://example.com")
 
     res = leader_client.delete(_detail_url(task, link))
@@ -141,8 +133,26 @@ def test_leader_can_delete_any_link(leader_client, team, creator, admin_user):
     assert res.status_code == 204
 
 
+def test_dept_lead_can_delete_any_link(dept_lead_client, team, creator, admin_user):
+    task = team_task(creator, team)
+    link = TaskLink.objects.create(task=task, added_by=admin_user, url="https://example.com")
+
+    res = dept_lead_client.delete(_detail_url(task, link))
+
+    assert res.status_code == 204
+
+
+def test_admin_can_delete_any_link(admin_client, team, creator, member_user):
+    task = team_task(creator, team)
+    link = TaskLink.objects.create(task=task, added_by=member_user, url="https://example.com")
+
+    res = admin_client.delete(_detail_url(task, link))
+
+    assert res.status_code == 204
+
+
 def test_unauthenticated_cannot_list_links(api_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
 
     res = api_client.get(_list_url(task))
 
@@ -150,7 +160,7 @@ def test_unauthenticated_cannot_list_links(api_client, team, creator):
 
 
 def test_unauthenticated_cannot_delete_link(api_client, team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     link = TaskLink.objects.create(task=task, added_by=creator, url="https://example.com")
 
     res = api_client.delete(_detail_url(task, link))
@@ -159,8 +169,8 @@ def test_unauthenticated_cannot_delete_link(api_client, team, creator):
 
 
 def test_delete_via_wrong_task_url_is_404(member_client, team_member, team, creator):
-    task_a = _team_task(creator, team)
-    task_b = _team_task(creator, team)
+    task_a = team_task(creator, team)
+    task_b = team_task(creator, team)
     link = TaskLink.objects.create(task=task_b, added_by=team_member, url="https://example.com")
 
     res = member_client.delete(_detail_url(task_a, link))
@@ -169,7 +179,7 @@ def test_delete_via_wrong_task_url_is_404(member_client, team_member, team, crea
 
 
 def test_links_deleted_with_task(team, creator):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     TaskLink.objects.create(task=task, added_by=creator, url="https://example.com")
 
     task.delete()

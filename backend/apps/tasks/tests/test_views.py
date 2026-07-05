@@ -5,19 +5,10 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.tasks.models import Task
+from apps.tasks.tests.helpers import team_task
 from apps.teams.models import Department, Team
 
 pytestmark = pytest.mark.django_db
-
-
-def _team_task(creator, team, **kwargs):
-    return Task.objects.create(
-        title=kwargs.pop("title", "Team task"),
-        created_by=creator,
-        assignee_type=Task.AssigneeType.TEAM,
-        assignee_team=team,
-        **kwargs,
-    )
 
 
 def test_leader_creates_task_in_own_team_sets_created_by(leader_client, team_leader, team):
@@ -131,7 +122,7 @@ def test_department_lead_can_create_user_task_for_department_member(dept_lead_cl
 
 
 def test_department_lead_can_edit_team_task_in_their_department(dept_lead_client, creator, team):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     res = dept_lead_client.patch(
         reverse("task-detail", args=[task.id]), {"title": "Renamed"}, format="json"
     )
@@ -152,7 +143,7 @@ def test_department_lead_cannot_manage_team_in_other_department(dept_lead_client
 
 
 def test_member_can_retrieve_visible_team_task(member_client, creator, team):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     res = member_client.get(reverse("task-detail", args=[task.id]))
     assert res.status_code == 200
     assert res.data["id"] == task.id
@@ -168,8 +159,8 @@ def test_title_over_max_length_returns_400(admin_client, team):
 
 
 def test_list_scoped_to_visible(member_client, creator, team, other_team):
-    _team_task(creator, team, title="Visible")
-    _team_task(creator, other_team, title="Hidden")
+    team_task(creator, team, title="Visible")
+    team_task(creator, other_team, title="Hidden")
     res = member_client.get(reverse("task-list"))
     assert res.status_code == 200
     titles = {t["title"] for t in res.data["results"]}
@@ -177,33 +168,33 @@ def test_list_scoped_to_visible(member_client, creator, team, other_team):
 
 
 def test_outsider_gets_404_on_detail(outsider_client, creator, team):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     res = outsider_client.get(reverse("task-detail", args=[task.id]))
     assert res.status_code == 404
 
 
 def test_member_cannot_delete_team_task(member_client, creator, team):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     res = member_client.delete(reverse("task-detail", args=[task.id]))
     assert res.status_code == 403
 
 
 def test_leader_can_delete_team_task(leader_client, creator, team):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     res = leader_client.delete(reverse("task-detail", args=[task.id]))
     assert res.status_code == 204
 
 
 def test_filter_by_status(admin_client, creator, team):
-    _team_task(creator, team, title="New one")
-    _team_task(creator, team, title="Done one", status=Task.Status.DONE)
+    team_task(creator, team, title="New one")
+    team_task(creator, team, title="Done one", status=Task.Status.DONE)
     res = admin_client.get(reverse("task-list"), {"status": "done"})
     assert [t["title"] for t in res.data["results"]] == ["Done one"]
 
 
 def test_search_by_title(admin_client, creator, team):
-    _team_task(creator, team, title="Deploy pipeline")
-    _team_task(creator, team, title="Write docs")
+    team_task(creator, team, title="Deploy pipeline")
+    team_task(creator, team, title="Write docs")
     res = admin_client.get(reverse("task-list"), {"search": "deploy"})
     assert [t["title"] for t in res.data["results"]] == ["Deploy pipeline"]
 
@@ -214,7 +205,7 @@ def test_invalid_assignee_user_filter_returns_400(admin_client):
 
 
 def test_patch_change_type_nulls_stale_assignee(admin_client, creator, team, member_user):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     url = reverse("task-detail", args=[task.id])
     res = admin_client.patch(
         url,
@@ -230,23 +221,23 @@ def test_patch_change_type_nulls_stale_assignee(admin_client, creator, team, mem
 
 def test_is_overdue_true_filters_by_stored_status(admin_client, creator, team):
     past = timezone.now() - timedelta(days=1)
-    _team_task(creator, team, title="Flipped", status=Task.Status.OVERDUE, due_date=past)
+    team_task(creator, team, title="Flipped", status=Task.Status.OVERDUE, due_date=past)
     # Past-due but not yet flipped: stored status is the source of truth, so not overdue.
-    _team_task(creator, team, title="Not flipped", status=Task.Status.NEW, due_date=past)
+    team_task(creator, team, title="Not flipped", status=Task.Status.NEW, due_date=past)
     res = admin_client.get(reverse("task-list"), {"is_overdue": "true"})
     assert [t["title"] for t in res.data["results"]] == ["Flipped"]
 
 
 def test_is_overdue_false_excludes_stored_overdue(admin_client, creator, team):
     past = timezone.now() - timedelta(days=1)
-    _team_task(creator, team, title="Flipped", status=Task.Status.OVERDUE, due_date=past)
-    _team_task(creator, team, title="Not flipped", status=Task.Status.NEW, due_date=past)
+    team_task(creator, team, title="Flipped", status=Task.Status.OVERDUE, due_date=past)
+    team_task(creator, team, title="Not flipped", status=Task.Status.NEW, due_date=past)
     res = admin_client.get(reverse("task-list"), {"is_overdue": "false"})
     assert [t["title"] for t in res.data["results"]] == ["Not flipped"]
 
 
 def test_patch_add_mismatched_assignee_rejected(admin_client, creator, team, member_user):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     url = reverse("task-detail", args=[task.id])
     res = admin_client.patch(
         url,
@@ -257,7 +248,7 @@ def test_patch_add_mismatched_assignee_rejected(admin_client, creator, team, mem
 
 
 def test_patch_change_type_without_new_assignee_rejected(admin_client, creator, team):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     url = reverse("task-detail", args=[task.id])
     res = admin_client.patch(
         url,
@@ -268,7 +259,7 @@ def test_patch_change_type_without_new_assignee_rejected(admin_client, creator, 
 
 
 def test_patch_descriptive_only_keeps_assignee(admin_client, creator, team):
-    task = _team_task(creator, team)
+    task = team_task(creator, team)
     url = reverse("task-detail", args=[task.id])
     res = admin_client.patch(url, {"title": "Renamed"}, format="json")
     assert res.status_code == 200
