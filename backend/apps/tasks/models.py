@@ -70,10 +70,14 @@ class Task(models.Model):
         )
 
 
+TASK_LINK_URL_MAX_LENGTH = 500
+TASK_LINK_LABEL_MAX_LENGTH = 200
+
+
 class TaskLink(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="links")
-    url = models.URLField(max_length=500)
-    label = models.CharField(max_length=200, blank=True)
+    url = models.URLField(max_length=TASK_LINK_URL_MAX_LENGTH)
+    label = models.CharField(max_length=TASK_LINK_LABEL_MAX_LENGTH, blank=True)
     added_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,

@@ -178,6 +178,7 @@ class TaskAttachmentDetailView(generics.DestroyAPIView):
 
 class TaskLinkListCreateView(generics.ListCreateAPIView):
     serializer_class = TaskLinkSerializer
+    permission_classes = [IsAuthenticated]
     pagination_class = None
 
     def _task(self):
