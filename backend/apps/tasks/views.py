@@ -1,5 +1,6 @@
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
@@ -48,7 +49,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
         # Schema generation introspects the queryset with an anonymous fake view.
         if getattr(self, "swagger_fake_view", False):
             return Task.objects.none()
-        return visible_tasks(self.request.user)
+        return visible_tasks(self.request.user).prefetch_related("status_events")
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -62,7 +63,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
                 assignee_department_id=getattr(data.get("assignee_department"), "id", None),
             ):
                 raise PermissionDenied(NOT_ALLOWED_TO_ASSIGN_ERROR_MESSAGE)
-        task = serializer.save(created_by=user)
+        task = serializer.save(created_by=user, assigned_at=timezone.now())
         notify_task_assignment(task, actor=user)
 
 
@@ -71,7 +72,7 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, CanEditTask]
 
     def get_queryset(self):
-        return visible_tasks(self.request.user)
+        return visible_tasks(self.request.user).prefetch_related("status_events")
 
     def perform_update(self, serializer):
         instance = serializer.instance
@@ -89,6 +90,8 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
             task.assignee_department_id,
         )
         if after != before:
+            task.assigned_at = timezone.now()
+            task.save(update_fields=["assigned_at", "updated_at"])
             notify_task_assignment(task, actor=self.request.user)
 
 

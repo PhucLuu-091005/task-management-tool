@@ -284,3 +284,48 @@ def test_patch_descriptive_only_keeps_assignee(admin_client, creator, team):
     task.refresh_from_db()
     assert task.title == "Renamed"
     assert task.assignee_team_id == team.id
+
+
+def test_create_sets_assigned_at(admin_client, team):
+    res = admin_client.post(
+        reverse("task-list"),
+        {"title": "New", "assignee_type": "team", "assignee_team": team.id},
+        format="json",
+    )
+    assert res.status_code == 201
+    task = Task.objects.get(id=res.data["id"])
+    assert task.assigned_at is not None
+
+
+def test_reassign_sets_assigned_at(admin_client, creator, member_user):
+    # Created directly so assigned_at starts empty, isolating the reassign write path.
+    task = Task.objects.create(
+        title="T",
+        created_by=creator,
+        assignee_type=Task.AssigneeType.USER,
+        assignee_user=member_user,
+    )
+    assert task.assigned_at is None
+    res = admin_client.patch(
+        reverse("task-detail", args=[task.id]),
+        {"assignee_user": creator.id},
+        format="json",
+    )
+    assert res.status_code == 200
+    task.refresh_from_db()
+    assert task.assigned_at is not None
+
+
+def test_descriptive_update_leaves_assigned_at_untouched(admin_client, creator, member_user):
+    task = Task.objects.create(
+        title="T",
+        created_by=creator,
+        assignee_type=Task.AssigneeType.USER,
+        assignee_user=member_user,
+    )
+    res = admin_client.patch(
+        reverse("task-detail", args=[task.id]), {"title": "Renamed"}, format="json"
+    )
+    assert res.status_code == 200
+    task.refresh_from_db()
+    assert task.assigned_at is None
