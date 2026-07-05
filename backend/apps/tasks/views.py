@@ -1,5 +1,7 @@
 from django.db.models import Count, Q
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -114,6 +116,7 @@ def _grouped_counts(qs, field, out_key):
 
 
 class TaskStatsView(APIView):
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         qs = visible_tasks(request.user)
 

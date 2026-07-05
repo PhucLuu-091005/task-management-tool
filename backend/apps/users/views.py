@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.db.models import prefetch_related_objects
-from rest_framework import status
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers, status
 from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -46,6 +48,10 @@ class ProfileView(APIView):
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=inline_serializer("LogoutRequest", fields={"refresh": serializers.CharField()}),
+        responses={205: None, 400: OpenApiTypes.OBJECT},
+    )
     def post(self, request, *args, **kwargs):
         try:
             token = RefreshToken(request.data["refresh"])
