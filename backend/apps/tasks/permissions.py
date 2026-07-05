@@ -10,7 +10,9 @@ def _user_team_ids(user):
 
 
 def visible_tasks(user):
-    qs = Task.objects.all()
+    qs = Task.objects.select_related(
+        "assignee_user", "assignee_team", "assignee_department", "created_by"
+    )
     if getattr(user, "is_admin", False):
         return qs
     team_ids = _user_team_ids(user)
@@ -112,3 +114,16 @@ class CanEditTask(BasePermission):
             assignee_team_id=obj.assignee_team_id,
             assignee_department_id=obj.assignee_department_id,
         )
+
+
+class CanDeleteTaskItem(BasePermission):
+    """Task sub-items (attachments, links): deletable by whoever added them or a task editor."""
+
+    def has_object_permission(self, request, view, obj) -> bool:
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        # Guard against a SET_NULL'd uploader: None == None must not grant delete.
+        if obj.added_by_id is not None and obj.added_by_id == user.id:
+            return True
+        return CanEditTask().has_object_permission(request, view, obj.task)
