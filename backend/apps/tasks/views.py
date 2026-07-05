@@ -26,6 +26,7 @@ from apps.tasks.serializers import (
     TaskAttachmentSerializer,
     TaskLinkSerializer,
     TaskSerializer,
+    TaskStatusSerializer,
 )
 
 
@@ -89,6 +90,26 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
         if after != before:
             notify_task_assignment(task, actor=self.request.user)
+
+
+class TaskStatusView(generics.UpdateAPIView):
+    serializer_class = TaskStatusSerializer
+    # Status-update authz is intentionally visibility-scoped (any member of the
+    # assigned team/department may advance status), not CanEditTask like other task
+    # mutations. get_object() through visible_tasks() is the only gate — keep it that way.
+    permission_classes = [IsAuthenticated]
+    http_method_names = ["patch", "options"]
+
+    def get_queryset(self):
+        return visible_tasks(self.request.user)
+
+    @extend_schema(responses=TaskSerializer)
+    def patch(self, request, *args, **kwargs):
+        task = self.get_object()
+        serializer = self.get_serializer(task, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(TaskSerializer(task).data)
 
 
 def _grouped_counts(qs, field, out_key):
