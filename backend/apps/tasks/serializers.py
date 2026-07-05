@@ -159,9 +159,19 @@ class TaskStatusSerializer(serializers.ModelSerializer):
         return value
 
     def update(self, instance, validated_data):
-        from_status = instance.status
         to_status = validated_data["status"]
         with transaction.atomic():
+            # Re-read under a row lock and re-validate: status may have changed
+            # (e.g. a concurrent overdue flip) between get_object() and here, so
+            # the transition and its recorded from_status stay consistent.
+            locked = Task.objects.select_for_update().get(pk=instance.pk)
+            if not Task.can_transition(locked.status, to_status):
+                raise serializers.ValidationError(
+                    INVALID_STATUS_TRANSITION_ERROR_MESSAGE.format(
+                        from_status=locked.status, to_status=to_status
+                    )
+                )
+            from_status = locked.status
             instance = super().update(instance, validated_data)
             TaskStatusEvent.objects.create(
                 task=instance,

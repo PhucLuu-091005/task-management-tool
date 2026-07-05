@@ -9,14 +9,18 @@ class Command(BaseCommand):
     help = "Flip past-due, unfinished tasks to the 'overdue' status."
 
     def handle(self, *args, **options):
-        due = Task.objects.filter(due_date__lt=timezone.now()).exclude(
-            status__in=[Task.Status.DONE, Task.Status.OVERDUE]
-        )
-        # Snapshot each task's current status before the bulk update so the history
-        # rows carry the real from_status; changed_by is None for this system flip.
-        snapshot = list(due.values_list("id", "status"))
         with transaction.atomic():
-            due.update(status=Task.Status.OVERDUE)
+            due = (
+                Task.objects.select_for_update()
+                .filter(due_date__lt=timezone.now())
+                .exclude(status__in=[Task.Status.DONE, Task.Status.OVERDUE])
+            )
+            # Lock and snapshot the eligible rows so the flip and its history rows
+            # describe exactly the same set even under a concurrent status write;
+            # changed_by is None for this system flip.
+            snapshot = list(due.values_list("id", "status"))
+            ids = [task_id for task_id, _ in snapshot]
+            Task.objects.filter(id__in=ids).update(status=Task.Status.OVERDUE)
             TaskStatusEvent.objects.bulk_create(
                 TaskStatusEvent(
                     task_id=task_id,
