@@ -117,6 +117,9 @@ class TaskStatsView(APIView):
     def get(self, request):
         qs = visible_tasks(request.user)
 
+        # Stored `status` is the source of truth: the `overdue` bucket tracks the
+        # flip_overdue_tasks job, not a live due_date check, so a past-due task not
+        # yet flipped still counts under its current status.
         by_status = dict.fromkeys(Task.Status.values, 0)
         for row in qs.values("status").annotate(count=Count("id", distinct=True)):
             by_status[row["status"]] = row["count"]
