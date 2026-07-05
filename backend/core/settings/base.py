@@ -118,6 +118,12 @@ STATIC_URL = "static/"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Local disk by default; production.py swaps the "default" store to S3.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+
 AUTH_USER_MODEL = "users.User"
 
 REST_FRAMEWORK = {
