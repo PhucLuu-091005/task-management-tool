@@ -2,11 +2,6 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-from apps.tasks.constants import (
-    TASK_LINK_LABEL_MAX_LENGTH,
-    TASK_LINK_URL_MAX_LENGTH,
-)
-
 
 class Task(models.Model):
     class Status(models.TextChoices):
@@ -73,6 +68,10 @@ class Task(models.Model):
         return bool(
             self.due_date and self.due_date < timezone.now() and self.status != self.Status.DONE
         )
+
+
+TASK_LINK_URL_MAX_LENGTH = 500
+TASK_LINK_LABEL_MAX_LENGTH = 200
 
 
 class TaskLink(models.Model):

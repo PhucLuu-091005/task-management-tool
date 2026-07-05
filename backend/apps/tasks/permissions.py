@@ -10,7 +10,9 @@ def _user_team_ids(user):
 
 
 def visible_tasks(user):
-    qs = Task.objects.all()
+    qs = Task.objects.select_related(
+        "assignee_user", "assignee_team", "assignee_department", "created_by"
+    )
     if getattr(user, "is_admin", False):
         return qs
     team_ids = _user_team_ids(user)

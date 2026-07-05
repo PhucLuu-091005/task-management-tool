@@ -149,6 +149,18 @@ def test_member_can_retrieve_visible_team_task(member_client, creator, team):
     assert res.data["id"] == task.id
 
 
+def test_member_can_retrieve_visible_department_task(member_client, creator, department):
+    task = Task.objects.create(
+        title="Dept task",
+        created_by=creator,
+        assignee_type=Task.AssigneeType.DEPARTMENT,
+        assignee_department=department,
+    )
+    res = member_client.get(reverse("task-detail", args=[task.id]))
+    assert res.status_code == 200
+    assert res.data["id"] == task.id
+
+
 def test_title_over_max_length_returns_400(admin_client, team):
     res = admin_client.post(
         reverse("task-list"),
@@ -171,6 +183,12 @@ def test_outsider_gets_404_on_detail(outsider_client, creator, team):
     task = team_task(creator, team)
     res = outsider_client.get(reverse("task-detail", args=[task.id]))
     assert res.status_code == 404
+
+
+def test_member_cannot_update_team_task(member_client, creator, team):
+    task = team_task(creator, team)
+    res = member_client.patch(reverse("task-detail", args=[task.id]), {"title": "changed"})
+    assert res.status_code == 403
 
 
 def test_member_cannot_delete_team_task(member_client, creator, team):
