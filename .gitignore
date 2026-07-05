@@ -18,6 +18,6 @@ ROADMAP.md
 
 # Local-only Claude Code skills (kept out of git and CI)
 .claude/skills/explain/
-# Implementation plans are local-only (specs stay tracked)
-docs/superpowers/plans/
+# Superpowers docs (specs + plans) are local-only — never committed
+docs/superpowers/
 .superpowers/
