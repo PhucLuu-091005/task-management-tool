@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from apps.notifications.services import notify_task_assignment
 from apps.tasks.constants import NOT_ALLOWED_TO_ASSIGN_ERROR_MESSAGE
 from apps.tasks.filters import TaskFilter
-from apps.tasks.models import Task
+from apps.tasks.models import Task, TaskAttachment
 from apps.tasks.permissions import (
     CanCreateTask,
     CanDeleteAttachment,
@@ -130,6 +130,9 @@ class TaskAttachmentListCreateView(generics.ListCreateAPIView):
         return get_object_or_404(visible_tasks(self.request.user), pk=self.kwargs["task_id"])
 
     def get_queryset(self):
+        # Schema generation introspects the queryset with an anonymous fake view and no kwargs.
+        if getattr(self, "swagger_fake_view", False):
+            return TaskAttachment.objects.none()
         return self._task().attachments.all()
 
     def perform_create(self, serializer):
@@ -141,5 +144,8 @@ class TaskAttachmentDetailView(generics.DestroyAPIView):
     permission_classes = [IsAuthenticated, CanDeleteAttachment]
 
     def get_queryset(self):
+        # Schema generation introspects the queryset with an anonymous fake view and no kwargs.
+        if getattr(self, "swagger_fake_view", False):
+            return TaskAttachment.objects.none()
         task = get_object_or_404(visible_tasks(self.request.user), pk=self.kwargs["task_id"])
         return task.attachments.all()

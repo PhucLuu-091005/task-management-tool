@@ -36,6 +36,16 @@ def _image_upload(name="shot.png", fmt="PNG", content_type="image/png"):
     return SimpleUploadedFile(name, _png_bytes(fmt).read(), content_type=content_type)
 
 
+def _oversized_upload():
+    # Random pixels resist PNG compression, so the encoded file exceeds the 5 MB cap.
+    side = 1500
+    img = Image.frombytes("RGB", (side, side), os.urandom(side * side * 3))
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return SimpleUploadedFile("big.png", buf.read(), content_type="image/png")
+
+
 def _list_url(task):
     return reverse("task-attachment-list", args=[task.id])
 
@@ -62,16 +72,6 @@ def test_list_attachments_for_task(member_client, team, creator):
 
     assert res.status_code == 200
     assert len(res.data) == 1
-
-
-def _oversized_upload():
-    # Random pixels resist PNG compression, so the encoded file exceeds the 5 MB cap.
-    side = 1500
-    img = Image.frombytes("RGB", (side, side), os.urandom(side * side * 3))
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    return SimpleUploadedFile("big.png", buf.read(), content_type="image/png")
 
 
 def test_upload_rejects_oversized_image(member_client, team, creator):
@@ -138,6 +138,28 @@ def test_leader_can_delete_any_attachment(leader_client, team, creator, admin_us
     )
 
     res = leader_client.delete(reverse("task-attachment-detail", args=[task.id, att.id]))
+
+    assert res.status_code == 204
+
+
+def test_department_lead_can_delete_any_attachment(dept_lead_client, team, creator, admin_user):
+    task = _team_task(creator, team)
+    att = TaskAttachment.objects.create(
+        task=task, added_by=admin_user, image="task_attachments/a.png"
+    )
+
+    res = dept_lead_client.delete(reverse("task-attachment-detail", args=[task.id, att.id]))
+
+    assert res.status_code == 204
+
+
+def test_admin_can_delete_any_attachment(admin_client, team, creator, team_member):
+    task = _team_task(creator, team)
+    att = TaskAttachment.objects.create(
+        task=task, added_by=team_member, image="task_attachments/a.png"
+    )
+
+    res = admin_client.delete(reverse("task-attachment-detail", args=[task.id, att.id]))
 
     assert res.status_code == 204
 
