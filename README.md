@@ -212,6 +212,42 @@ pre-commit run --all-files
 Sau khi `pre-commit install`, mỗi lần `git commit` sẽ tự chạy Ruff (`ruff-check --fix` +
 `ruff-format`); nếu hook sửa file, commit bị chặn để bạn `git add` lại rồi commit tiếp.
 
+## 8.2. Kiểm thử E2E (Playwright)
+
+Bộ kiểm thử end-to-end bằng **Playwright** (đặt cùng frontend, thư mục `frontend/e2e/`) chạy trên trình duyệt thật, đi qua toàn bộ stack: browser → Next.js → DRF → PostgreSQL. Phạm vi là các luồng cốt lõi:
+
+- **Xác thực:** đăng ký → đăng xuất → đăng nhập lại; chặn truy cập khi chưa đăng nhập.
+- **Vòng đời công việc:** tạo công việc → xem chi tiết → danh sách → đổi trạng thái Mới → Đang xử lý → Hoàn thành.
+- **Sửa/xoá công việc:** sửa tiêu đề (lưu và hiển thị lại) → xoá (qua hộp thoại xác nhận).
+- **Tìm kiếm & lọc:** tìm theo tiêu đề; lọc theo độ ưu tiên / trạng thái.
+
+### Chạy cục bộ
+
+Cần backend + database chạy sẵn ở `http://localhost:8000`:
+
+```bash
+# từ thư mục gốc repo — dựng db + backend
+docker compose up -d db backend
+
+# lần đầu: cài deps và trình duyệt cho Playwright
+cd frontend
+npm install
+npx playwright install chromium
+
+# chạy test (Playwright tự khởi động `next dev` ở cổng 3000)
+npm run test:e2e
+```
+
+Nếu frontend đã chạy sẵn, Playwright sẽ tái sử dụng server đó (`reuseExistingServer`).
+
+Vì phân quyền (§5) chỉ cho admin/leader tạo công việc, các test cần một tài khoản admin. `global-setup.ts` tự seed tài khoản này bằng lệnh `manage.py seed_e2e` chạy trong container backend (chọn theo cổng API publish). Lệnh **từ chối chạy khi `DEBUG=False`** để tránh vô tình tạo admin trên production.
+
+Biến môi trường: `NEXT_PUBLIC_API_URL` (mặc định `http://localhost:8000`), `E2E_BASE_URL` (mặc định `http://localhost:3000`); ghi đè tài khoản admin qua `E2E_ADMIN_USERNAME` / `E2E_ADMIN_PASSWORD` / `E2E_ADMIN_EMAIL`.
+
+### CI
+
+Job `e2e` trong `.github/workflows/ci.yml` (sau job `test`) dùng lại Postgres service như job pytest: migrate → `seed_e2e` → chạy backend → `npm ci` → cài Chromium → `playwright test`. Dưới CI, `global-setup.ts` bỏ qua bước seed qua Docker (đã có step seed riêng trong workflow).
+
 ## 9. Tiêu chí hoàn thành (Definition of Done)
 
 - [ ] CRUD đầy đủ cho Phòng ban, Nhóm, User và Task (Nhân viên ∈ Nhóm ∈ Phòng ban).

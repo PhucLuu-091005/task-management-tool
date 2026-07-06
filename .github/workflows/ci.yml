@@ -85,3 +85,90 @@ jobs:
         with:
           name: coverage-html
           path: backend/htmlcov
+
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    needs: test
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: taskmanagement
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DJANGO_SECRET_KEY: ci-secret-key-not-for-production
+      DB_NAME: taskmanagement
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: 5432
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install backend dependencies
+        run: uv sync --frozen
+        working-directory: backend
+
+      - name: Apply migrations
+        run: uv run python manage.py migrate --noinput
+        working-directory: backend
+
+      # globalSetup skips its docker path under CI; seed the admin here instead.
+      - name: Seed E2E admin
+        run: uv run python manage.py seed_e2e
+        working-directory: backend
+
+      - name: Start backend API and wait for it
+        working-directory: backend
+        run: |
+          nohup uv run python manage.py runserver 0.0.0.0:8000 --noreload > /tmp/backend.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/api/schema/ >/dev/null; then
+              echo "backend is up"; exit 0
+            fi
+            sleep 1
+          done
+          echo "backend failed to start:"; cat /tmp/backend.log; exit 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+
+      # Playwright boots `next dev` itself (CI => no server reuse, 2 retries).
+      - name: Run Playwright tests
+        run: npx playwright test
+        working-directory: frontend
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          retention-days: 7
