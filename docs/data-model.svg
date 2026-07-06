@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 760" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="one" markerWidth="12" markerHeight="12" refX="6" refY="6" orient="auto">
+      <path d="M6,1 L6,11" stroke="#64748B" stroke-width="1.6"/>
+    </marker>
+    <marker id="many" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M2,2 L11,7 L2,12 M11,7 L2,7" stroke="#64748B" stroke-width="1.4" fill="none"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1000" height="760" rx="16" fill="#FFFFFF"/>
+  <rect x="0.5" y="0.5" width="999" height="759" rx="16" fill="none" stroke="#E2E8F0"/>
+
+  <text x="40" y="46" font-size="21" font-weight="700" fill="#0F172A">Mô hình dữ liệu</text>
+  <text x="40" y="70" font-size="13" fill="#64748B">Department 1—∗ Team 1—∗ TeamMembership ∗—1 User · Task giao cho user / team / department (đúng 1)</text>
+
+  <!-- ===== entity template helper drawn inline ===== -->
+
+  <!-- Department -->
+  <g>
+    <rect x="40" y="110" width="220" height="118" rx="10" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <rect x="40" y="110" width="220" height="30" rx="10" fill="#EFF4FF" stroke="#CBD5E1"/>
+    <rect x="40" y="128" width="220" height="12" fill="#EFF4FF"/>
+    <text x="52" y="130" font-size="14" font-weight="700" fill="#1D4ED8">Department</text>
+    <g font-size="12" fill="#0F172A">
+      <text x="52" y="160"><tspan font-weight="600">id</tspan>  PK</text>
+      <text x="52" y="180">name  ·  unique</text>
+      <text x="52" y="200">description</text>
+      <text x="52" y="220" fill="#1D4ED8">lead → User  (null)</text>
+    </g>
+  </g>
+
+  <!-- Team -->
+  <g>
+    <rect x="40" y="300" width="220" height="118" rx="10" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <rect x="40" y="300" width="220" height="30" rx="10" fill="#EFF4FF" stroke="#CBD5E1"/>
+    <rect x="40" y="318" width="220" height="12" fill="#EFF4FF"/>
+    <text x="52" y="320" font-size="14" font-weight="700" fill="#1D4ED8">Team</text>
+    <g font-size="12" fill="#0F172A">
+      <text x="52" y="350"><tspan font-weight="600">id</tspan>  PK</text>
+      <text x="52" y="370">name  ·  unique</text>
+      <text x="52" y="390" fill="#1D4ED8">department → Department</text>
+      <text x="52" y="410">description</text>
+    </g>
+  </g>
+
+  <!-- TeamMembership -->
+  <g>
+    <rect x="40" y="490" width="220" height="118" rx="10" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <rect x="40" y="490" width="220" height="30" rx="10" fill="#EFF4FF" stroke="#CBD5E1"/>
+    <rect x="40" y="508" width="220" height="12" fill="#EFF4FF"/>
+    <text x="52" y="510" font-size="14" font-weight="700" fill="#1D4ED8">TeamMembership</text>
+    <g font-size="12" fill="#0F172A">
+      <text x="52" y="540" fill="#1D4ED8">user → User</text>
+      <text x="52" y="560" fill="#1D4ED8">team → Team</text>
+      <text x="52" y="580">role: leader | member</text>
+      <text x="52" y="600" font-size="10.5" fill="#64748B">unique (user, team)</text>
+    </g>
+  </g>
+
+  <!-- User -->
+  <g>
+    <rect x="390" y="300" width="210" height="170" rx="10" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <rect x="390" y="300" width="210" height="30" rx="10" fill="#EFF4FF" stroke="#CBD5E1"/>
+    <rect x="390" y="318" width="210" height="12" fill="#EFF4FF"/>
+    <text x="402" y="320" font-size="14" font-weight="700" fill="#1D4ED8">User</text>
+    <text x="592" y="320" text-anchor="end" font-size="10" fill="#64748B">AbstractUser</text>
+    <g font-size="12" fill="#0F172A">
+      <text x="402" y="350"><tspan font-weight="600">id</tspan>  PK</text>
+      <text x="402" y="370">username  ·  unique</text>
+      <text x="402" y="390">email  ·  unique</text>
+      <text x="402" y="410">first_name / last_name</text>
+      <text x="402" y="430">is_admin: bool</text>
+      <text x="402" y="452" font-size="10.5" fill="#64748B">teams  (M2M qua TeamMembership)</text>
+    </g>
+  </g>
+
+  <!-- Task -->
+  <g>
+    <rect x="720" y="110" width="240" height="248" rx="10" fill="#FFFFFF" stroke="#2563EB"/>
+    <rect x="720" y="110" width="240" height="30" rx="10" fill="#DBE7FF" stroke="#2563EB"/>
+    <rect x="720" y="128" width="240" height="12" fill="#DBE7FF"/>
+    <text x="732" y="130" font-size="14" font-weight="700" fill="#1D4ED8">Task</text>
+    <g font-size="12" fill="#0F172A">
+      <text x="732" y="160"><tspan font-weight="600">id</tspan>  PK</text>
+      <text x="732" y="180">title · description</text>
+      <text x="732" y="200">status: new|in_progress|</text>
+      <text x="732" y="215" fill="#64748B">        done|overdue</text>
+      <text x="732" y="235">priority: low|med|high</text>
+      <text x="732" y="255">assignee_type: u|t|d</text>
+      <text x="732" y="275" fill="#1D4ED8">assignee_user → User</text>
+      <text x="732" y="293" fill="#1D4ED8">assignee_team → Team</text>
+      <text x="732" y="311" fill="#1D4ED8">assignee_department → Dept</text>
+      <text x="732" y="331" fill="#1D4ED8">created_by → User</text>
+      <text x="732" y="349">due_date · is_overdue*</text>
+    </g>
+  </g>
+
+  <!-- TaskLink -->
+  <g>
+    <rect x="720" y="410" width="240" height="92" rx="10" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <rect x="720" y="410" width="240" height="28" rx="10" fill="#EFF4FF" stroke="#CBD5E1"/>
+    <rect x="720" y="426" width="240" height="12" fill="#EFF4FF"/>
+    <text x="732" y="429" font-size="13.5" font-weight="700" fill="#1D4ED8">TaskLink</text>
+    <g font-size="12" fill="#0F172A">
+      <text x="732" y="458" fill="#1D4ED8">task → Task</text>
+      <text x="732" y="478">url (http/https) · label</text>
+      <text x="732" y="496" font-size="10.5" fill="#64748B">added_by → User (null)</text>
+    </g>
+  </g>
+
+  <!-- TaskAttachment -->
+  <g>
+    <rect x="720" y="536" width="240" height="100" rx="10" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <rect x="720" y="536" width="240" height="28" rx="10" fill="#EFF4FF" stroke="#CBD5E1"/>
+    <rect x="720" y="552" width="240" height="12" fill="#EFF4FF"/>
+    <text x="732" y="555" font-size="13.5" font-weight="700" fill="#1D4ED8">TaskAttachment</text>
+    <g font-size="12" fill="#0F172A">
+      <text x="732" y="584" fill="#1D4ED8">task → Task</text>
+      <text x="732" y="604">image · caption</text>
+      <text x="732" y="622" font-size="10.5" fill="#64748B">disk (dev) / S3 (prod)</text>
+    </g>
+  </g>
+
+  <!-- Relationships -->
+  <!-- Team -> Department -->
+  <line x1="150" y1="300" x2="150" y2="230" stroke="#64748B" stroke-width="1.5" marker-start="url(#many)" marker-end="url(#one)"/>
+  <!-- TeamMembership -> Team -->
+  <line x1="150" y1="490" x2="150" y2="420" stroke="#64748B" stroke-width="1.5" marker-start="url(#many)" marker-end="url(#one)"/>
+  <!-- TeamMembership -> User -->
+  <path d="M260 545 C 330 545, 340 400, 388 400" fill="none" stroke="#64748B" stroke-width="1.5" marker-start="url(#many)" marker-end="url(#one)"/>
+  <!-- Department.lead -> User -->
+  <path d="M260 210 C 330 230, 340 350, 388 350" fill="none" stroke="#94A3B8" stroke-width="1.3" stroke-dasharray="5 3" marker-end="url(#one)"/>
+  <!-- Task.created_by / assignee_user -> User -->
+  <path d="M720 320 C 660 330, 640 380, 602 385" fill="none" stroke="#64748B" stroke-width="1.5" marker-start="url(#many)" marker-end="url(#one)"/>
+  <!-- Task.assignee_team -> Team -->
+  <path d="M720 293 C 460 250, 300 300, 262 340" fill="none" stroke="#94A3B8" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#one)"/>
+  <!-- Task.assignee_department -> Department -->
+  <path d="M720 275 C 430 150, 300 170, 262 175" fill="none" stroke="#94A3B8" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#one)"/>
+  <!-- TaskLink -> Task -->
+  <line x1="840" y1="410" x2="840" y2="360" stroke="#64748B" stroke-width="1.5" marker-start="url(#many)" marker-end="url(#one)"/>
+  <!-- TaskAttachment -> Task -->
+  <path d="M960 536 C 985 470, 985 420, 962 358" fill="none" stroke="#64748B" stroke-width="1.5" marker-start="url(#many)" marker-end="url(#one)"/>
+
+  <text x="40" y="700" font-size="11" fill="#64748B">— đường liền: quan hệ bắt buộc (1—∗)   ·   – – đứt nét: FK nullable (lead, assignee_team/department)   ·   is_overdue* là thuộc tính suy diễn khi đọc</text>
+</svg>

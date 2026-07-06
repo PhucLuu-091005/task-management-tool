@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 640" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arw" markerWidth="9" markerHeight="9" refX="7.5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#64748B"/>
+    </marker>
+    <marker id="arwB" markerWidth="9" markerHeight="9" refX="7.5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1040" height="640" rx="16" fill="#FFFFFF"/>
+  <rect x="0.5" y="0.5" width="1039" height="639" rx="16" fill="none" stroke="#E2E8F0"/>
+
+  <text x="40" y="46" font-size="21" font-weight="700" fill="#0F172A">Kiến trúc hệ thống</text>
+  <text x="40" y="70" font-size="13" fill="#64748B">Next.js (frontend) → proxy /api → Django REST → PostgreSQL · cron chạy tác vụ định kỳ</text>
+
+  <!-- Browser -->
+  <rect x="36" y="150" width="150" height="88" rx="12" fill="#F8FAFC" stroke="#CBD5E1"/>
+  <text x="111" y="188" text-anchor="middle" font-size="15" font-weight="600" fill="#0F172A">Trình duyệt</text>
+  <text x="111" y="210" text-anchor="middle" font-size="11.5" fill="#64748B">người dùng</text>
+
+  <!-- Next.js frontend -->
+  <rect x="242" y="126" width="252" height="150" rx="14" fill="#F1F5F9" stroke="#334155"/>
+  <text x="368" y="156" text-anchor="middle" font-size="16" font-weight="700" fill="#0F172A">Next.js 14</text>
+  <text x="368" y="176" text-anchor="middle" font-size="11.5" fill="#475569">App Router · React Query · axios</text>
+  <line x1="266" y1="190" x2="470" y2="190" stroke="#CBD5E1"/>
+  <text x="368" y="212" text-anchor="middle" font-size="11.5" fill="#334155">rewrites: /api/:path* → backend</text>
+  <text x="368" y="230" text-anchor="middle" font-size="11.5" fill="#334155">(tự thêm dấu "/" cuối)</text>
+  <text x="368" y="256" text-anchor="middle" font-size="11" fill="#64748B">Docker :3000</text>
+
+  <!-- Django API -->
+  <rect x="552" y="112" width="256" height="182" rx="14" fill="#EFF4FF" stroke="#2563EB"/>
+  <text x="680" y="142" text-anchor="middle" font-size="16" font-weight="700" fill="#1D4ED8">Django REST Framework</text>
+  <text x="680" y="162" text-anchor="middle" font-size="11.5" fill="#3B5BDB">SimpleJWT · drf-spectacular · filter</text>
+  <line x1="576" y1="176" x2="784" y2="176" stroke="#BFD3FF"/>
+  <g font-size="12" fill="#0F172A">
+    <rect x="576" y="186" width="100" height="28" rx="7" fill="#FFFFFF" stroke="#BFD3FF"/>
+    <text x="626" y="204" text-anchor="middle">users</text>
+    <rect x="684" y="186" width="100" height="28" rx="7" fill="#FFFFFF" stroke="#BFD3FF"/>
+    <text x="734" y="204" text-anchor="middle">tasks</text>
+    <rect x="576" y="220" width="100" height="28" rx="7" fill="#FFFFFF" stroke="#BFD3FF"/>
+    <text x="626" y="238" text-anchor="middle">teams</text>
+    <rect x="684" y="220" width="100" height="28" rx="7" fill="#FFFFFF" stroke="#BFD3FF"/>
+    <text x="734" y="238" text-anchor="middle">notifications</text>
+  </g>
+  <text x="680" y="276" text-anchor="middle" font-size="11" fill="#3B5BDB">Docker :8000 · uv · Python 3.14</text>
+
+  <!-- PostgreSQL -->
+  <g>
+    <path d="M886 158 a62 15 0 0 0 124 0 v82 a62 15 0 0 1 -124 0 Z" fill="#F8FAFC" stroke="#CBD5E1"/>
+    <ellipse cx="948" cy="158" rx="62" ry="15" fill="#F1F5F9" stroke="#CBD5E1"/>
+    <text x="948" y="208" text-anchor="middle" font-size="14" font-weight="600" fill="#0F172A">PostgreSQL</text>
+    <text x="948" y="226" text-anchor="middle" font-size="11" fill="#64748B">16-alpine</text>
+  </g>
+
+  <!-- Cron -->
+  <rect x="552" y="356" width="256" height="150" rx="14" fill="#F8FAFC" stroke="#CBD5E1"/>
+  <text x="680" y="386" text-anchor="middle" font-size="15" font-weight="600" fill="#0F172A">Cron · supercronic</text>
+  <g font-size="11.5" fill="#0F172A">
+    <rect x="574" y="402" width="212" height="40" rx="8" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <text x="586" y="420" font-weight="600">flip_overdue_tasks</text>
+    <text x="586" y="435" fill="#64748B">00:00 · gắn cờ Task quá hạn</text>
+    <rect x="574" y="450" width="212" height="40" rx="8" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <text x="586" y="468" font-weight="600">send_task_reminders</text>
+    <text x="586" y="483" fill="#64748B">08:30 · email nhắc việc</text>
+  </g>
+
+  <!-- Email + S3 -->
+  <rect x="886" y="300" width="124" height="54" rx="10" fill="#F8FAFC" stroke="#CBD5E1"/>
+  <text x="948" y="324" text-anchor="middle" font-size="13" font-weight="600" fill="#0F172A">Email</text>
+  <text x="948" y="341" text-anchor="middle" font-size="10.5" fill="#64748B">SMTP / console</text>
+
+  <rect x="886" y="366" width="124" height="54" rx="10" fill="#F8FAFC" stroke="#CBD5E1"/>
+  <text x="948" y="390" text-anchor="middle" font-size="13" font-weight="600" fill="#0F172A">S3 storage</text>
+  <text x="948" y="407" text-anchor="middle" font-size="10.5" fill="#64748B">đính kèm (prod)</text>
+
+  <!-- Arrows -->
+  <line x1="186" y1="190" x2="240" y2="192" stroke="#2563EB" stroke-width="1.6" marker-end="url(#arwB)"/>
+  <line x1="240" y1="208" x2="186" y2="206" stroke="#94A3B8" stroke-width="1.4" marker-end="url(#arw)"/>
+  <text x="213" y="180" text-anchor="middle" font-size="10.5" fill="#1D4ED8">:3000</text>
+
+  <line x1="494" y1="188" x2="550" y2="188" stroke="#2563EB" stroke-width="1.6" marker-end="url(#arwB)"/>
+  <line x1="550" y1="210" x2="494" y2="210" stroke="#94A3B8" stroke-width="1.4" marker-end="url(#arw)"/>
+  <text x="522" y="180" text-anchor="middle" font-size="10.5" fill="#1D4ED8">proxy</text>
+  <text x="522" y="228" text-anchor="middle" font-size="10.5" fill="#64748B">:8000</text>
+
+  <line x1="808" y1="196" x2="884" y2="196" stroke="#64748B" stroke-width="1.6" marker-end="url(#arw)"/>
+  <text x="846" y="188" text-anchor="middle" font-size="10.5" fill="#64748B">ORM</text>
+
+  <line x1="808" y1="250" x2="884" y2="316" stroke="#64748B" stroke-width="1.3" marker-end="url(#arw)"/>
+  <line x1="808" y1="268" x2="884" y2="384" stroke="#64748B" stroke-width="1.3" marker-end="url(#arw)"/>
+
+  <line x1="680" y1="356" x2="680" y2="298" stroke="#64748B" stroke-width="1.6" marker-end="url(#arw)"/>
+  <text x="694" y="330" font-size="10.5" fill="#64748B">manage.py</text>
+  <line x1="786" y1="422" x2="890" y2="240" stroke="#CBD5E1" stroke-width="1.3" stroke-dasharray="4 3"/>
+  <line x1="786" y1="470" x2="886" y2="340" stroke="#CBD5E1" stroke-width="1.3" stroke-dasharray="4 3"/>
+
+  <!-- Auth note -->
+  <rect x="36" y="300" width="452" height="120" rx="12" fill="#FCFDFF" stroke="#E2E8F0"/>
+  <text x="56" y="328" font-size="13" font-weight="700" fill="#1D4ED8">Xác thực (cookie-based JWT + CSRF)</text>
+  <g font-size="11.5" fill="#334155">
+    <text x="56" y="352">• access token: giữ trong <tspan font-weight="600">bộ nhớ JS</tspan>, gửi qua header Bearer</text>
+    <text x="56" y="372">• refresh token: <tspan font-weight="600">httpOnly cookie</tspan> (SameSite=Strict)</text>
+    <text x="56" y="392">• CSRF: cookie csrftoken (JS đọc được) → header X-CSRFToken</text>
+    <text x="56" y="412">• 401 → axios tự gọi token/refresh/ rồi thử lại (silent refresh)</text>
+  </g>
+</svg>
