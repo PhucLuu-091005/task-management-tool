@@ -1,10 +1,10 @@
-import { api } from "@/lib/api";
-import { clearTokens, getRefreshToken, setTokens } from "@/lib/auth-storage";
+import { api, ensureCsrfToken, silentRefresh } from "@/lib/api";
+import { clearAccessToken, setAccessToken } from "@/lib/auth-storage";
 import { RegisterPayload, User } from "@/lib/types";
 
 export async function login(username: string, password: string): Promise<void> {
   const res = await api.post("/users/login/", { username, password });
-  setTokens(res.data);
+  setAccessToken(res.data.access);
 }
 
 export async function register(payload: RegisterPayload): Promise<User> {
@@ -13,10 +13,20 @@ export async function register(payload: RegisterPayload): Promise<User> {
 }
 
 export async function logout(): Promise<void> {
-  const refresh = getRefreshToken();
   try {
-    if (refresh) await api.post("/users/logout/", { refresh });
+    await ensureCsrfToken();
+    await api.post("/users/logout/", {});
   } finally {
-    clearTokens();
+    clearAccessToken();
+  }
+}
+
+export async function restoreSession(): Promise<boolean> {
+  try {
+    await silentRefresh();
+    return true;
+  } catch {
+    clearAccessToken();
+    return false;
   }
 }

@@ -1,4 +1,10 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const BACKEND = process.env.BACKEND_INTERNAL_URL ?? "http://localhost:8000";
+
+const nextConfig = {
+  async rewrites() {
+    return [{ source: "/api/:path*", destination: `${BACKEND}/api/:path*` }];
+  },
+};
 
 export default nextConfig;

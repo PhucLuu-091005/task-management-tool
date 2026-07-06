@@ -10,15 +10,13 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 import { buttonStyles } from "@/components/ui/Button";
 import { FeatureCell, HeroPreview, Step } from "@/components/landing";
-import { hasSession } from "@/lib/auth-storage";
+import { useAuth } from "@/lib/auth-context";
 
 export default function LandingPage() {
-  const [authed, setAuthed] = useState(false);
-  useEffect(() => setAuthed(hasSession()), []);
+  const { authed } = useAuth();
 
   const appHref = authed ? "/tasks" : "/login";
   const appLabel = authed ? "Vào ứng dụng" : "Đăng nhập";

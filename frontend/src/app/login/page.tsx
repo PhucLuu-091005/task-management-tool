@@ -8,26 +8,26 @@ import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Field, fieldInput } from "@/components/ui/Field";
 import { apiErrorMessage } from "@/lib/api";
-import { hasSession } from "@/lib/auth-storage";
-import { login } from "@/lib/auth";
+import { useAuth } from "@/lib/auth-context";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { ready, authed, signIn } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (hasSession()) router.replace("/tasks");
-  }, [router]);
+    if (ready && authed) router.replace("/tasks");
+  }, [router, ready, authed]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      await login(username, password);
+      await signIn(username, password);
       router.replace("/tasks");
     } catch (err) {
       setError(

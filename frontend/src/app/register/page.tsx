@@ -8,11 +8,12 @@ import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Field, fieldInput } from "@/components/ui/Field";
 import { apiErrorMessage } from "@/lib/api";
-import { hasSession } from "@/lib/auth-storage";
-import { login, register } from "@/lib/auth";
+import { useAuth } from "@/lib/auth-context";
+import { register } from "@/lib/auth";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { ready, authed, signIn } = useAuth();
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -25,8 +26,8 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (hasSession()) router.replace("/tasks");
-  }, [router]);
+    if (ready && authed) router.replace("/tasks");
+  }, [router, ready, authed]);
 
   function setField(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -43,7 +44,7 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       await register(form);
-      await login(form.username, form.password);
+      await signIn(form.username, form.password);
       router.replace("/tasks");
     } catch (err) {
       setError(apiErrorMessage(err, "Đăng ký thất bại. Vui lòng thử lại sau."));

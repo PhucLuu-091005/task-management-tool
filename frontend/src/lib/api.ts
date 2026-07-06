@@ -1,16 +1,17 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
 import {
-  clearTokens,
+  clearAccessToken,
   getAccessToken,
-  getRefreshToken,
-  setTokens,
+  setAccessToken,
 } from "@/lib/auth-storage";
 
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-export const api = axios.create({ baseURL: `${API_URL}/api` });
+export const api = axios.create({
+  baseURL: "/api",
+  withCredentials: true,
+  xsrfCookieName: "csrftoken",
+  xsrfHeaderName: "X-CSRFToken",
+});
 
 api.interceptors.request.use((config) => {
   const token = getAccessToken();
@@ -18,40 +19,59 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+let csrfReady: Promise<void> | null = null;
+
+export function ensureCsrfToken(): Promise<void> {
+  csrfReady ??= axios
+    .get("/api/users/csrf/", { withCredentials: true })
+    .then(() => undefined)
+    .catch((err) => {
+      csrfReady = null;
+      throw err;
+    });
+  return csrfReady;
+}
+
 let refreshPromise: Promise<string> | null = null;
 
-async function refreshAccessToken(): Promise<string> {
-  const refresh = getRefreshToken();
-  if (!refresh) throw new Error("Missing refresh token");
-  // Plain axios: the api instance would attach the stale access token.
-  const res = await axios.post(`${API_URL}/api/users/token/refresh`, {
-    refresh,
-  });
-  // Server rotates refresh tokens; fall back to the old one if absent.
-  setTokens({ access: res.data.access, refresh: res.data.refresh ?? refresh });
+// Plain axios (not `api`): avoids attaching the stale access token and avoids
+// re-entering this response interceptor on the refresh call itself.
+async function doRefresh(): Promise<string> {
+  await ensureCsrfToken();
+  const res = await axios.post(
+    "/api/users/token/refresh",
+    {},
+    {
+      withCredentials: true,
+      xsrfCookieName: "csrftoken",
+      xsrfHeaderName: "X-CSRFToken",
+    },
+  );
+  setAccessToken(res.data.access);
   return res.data.access;
+}
+
+// One shared in-flight refresh: the cold-start restore and the 401 interceptor
+// must not rotate the refresh cookie twice concurrently (the 2nd would 401).
+export function silentRefresh(): Promise<string> {
+  refreshPromise ??= doRefresh().finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
 }
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retried?: boolean };
 
 api.interceptors.response.use(undefined, async (error: AxiosError) => {
   const original = error.config as RetriableConfig | undefined;
-  if (
-    error.response?.status === 401 &&
-    original &&
-    !original._retried &&
-    getRefreshToken()
-  ) {
+  if (error.response?.status === 401 && original && !original._retried) {
     original._retried = true;
     try {
-      refreshPromise ??= refreshAccessToken().finally(() => {
-        refreshPromise = null;
-      });
-      const access = await refreshPromise;
+      const access = await silentRefresh();
       original.headers.Authorization = `Bearer ${access}`;
       return api(original);
     } catch {
-      clearTokens();
+      clearAccessToken();
     }
   }
   return Promise.reject(error);
