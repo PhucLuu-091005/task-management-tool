@@ -3,9 +3,8 @@ from django.contrib.auth import get_user_model
 from django.db.models import prefetch_related_objects
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, inline_serializer
-from rest_framework import serializers, status
+from drf_spectacular.utils import extend_schema
+from rest_framework import status
 from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -14,12 +13,8 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from apps.users.constants import (
-    MISSING_REFRESH_TOKEN_ERROR_MESSAGE,
-    REFRESH_COOKIE_MISSING_ERROR_MESSAGE,
-    TOKEN_INVALID_ERROR_MESSAGE,
-)
-from apps.users.cookies import set_refresh_cookie
+from apps.users.constants import REFRESH_COOKIE_MISSING_ERROR_MESSAGE
+from apps.users.cookies import delete_refresh_cookie, set_refresh_cookie
 from apps.users.managers import MEMBERSHIPS_PREFETCH
 from apps.users.permissions import IsAdmin
 from apps.users.serializers import RegisterSerializer, UserSerializer
@@ -94,23 +89,18 @@ class CSRFView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@method_decorator(csrf_protect, name="dispatch")
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(
-        request=inline_serializer("LogoutRequest", fields={"refresh": serializers.CharField()}),
-        responses={205: None, 400: OpenApiTypes.OBJECT},
-    )
+    @extend_schema(request=None, responses={205: None})
     def post(self, request, *args, **kwargs):
-        try:
-            token = RefreshToken(request.data["refresh"])
-            token.blacklist()
-            return Response(status=status.HTTP_205_RESET_CONTENT)
-        except KeyError:
-            return Response(
-                {"refresh": MISSING_REFRESH_TOKEN_ERROR_MESSAGE}, status=status.HTTP_400_BAD_REQUEST
-            )
-        except TokenError:
-            return Response(
-                {"refresh": TOKEN_INVALID_ERROR_MESSAGE}, status=status.HTTP_400_BAD_REQUEST
-            )
+        response = Response(status=status.HTTP_205_RESET_CONTENT)
+        token = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE)
+        if token:
+            try:
+                RefreshToken(token).blacklist()
+            except TokenError:
+                pass
+        delete_refresh_cookie(response)
+        return response
