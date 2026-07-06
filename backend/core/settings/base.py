@@ -162,3 +162,7 @@ AUTH_REFRESH_COOKIE_SAMESITE = "Strict"
 AUTH_REFRESH_COOKIE_SECURE = False
 
 CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="http://localhost:3000").split(",")
+
+# The SPA must read the csrftoken cookie to echo it in the X-CSRFToken header,
+# so this cookie is deliberately NOT httpOnly (Django's default, made explicit).
+CSRF_COOKIE_HTTPONLY = False

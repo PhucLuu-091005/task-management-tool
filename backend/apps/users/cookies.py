@@ -1,7 +1,8 @@
 from django.conf import settings
+from django.http import HttpResponse
 
 
-def set_refresh_cookie(response, token: str) -> None:
+def set_refresh_cookie(response: HttpResponse, token: str) -> None:
     response.set_cookie(
         settings.AUTH_REFRESH_COOKIE,
         token,
@@ -13,7 +14,7 @@ def set_refresh_cookie(response, token: str) -> None:
     )
 
 
-def delete_refresh_cookie(response) -> None:
+def delete_refresh_cookie(response: HttpResponse) -> None:
     response.delete_cookie(
         settings.AUTH_REFRESH_COOKIE,
         path=settings.AUTH_REFRESH_COOKIE_PATH,
