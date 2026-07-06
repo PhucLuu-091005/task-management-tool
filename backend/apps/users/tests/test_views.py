@@ -98,6 +98,24 @@ def test_logout_without_cookie_is_idempotent(auth_client, logout_url):
 
 
 @pytest.mark.django_db
+def test_logout_without_cookie_with_csrf_is_idempotent(
+    login_url, logout_url, csrf_url, login_payload
+):
+    client = APIClient(enforce_csrf_checks=True)
+    login = client.post(login_url, login_payload, format="json")
+    access = login.data["access"]
+    client.get(csrf_url)
+    csrf = client.cookies["csrftoken"].value
+    # Exercise the no-refresh-cookie path under real CSRF enforcement.
+    del client.cookies[settings.AUTH_REFRESH_COOKIE]
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}", HTTP_X_CSRFTOKEN=csrf)
+
+    res = client.post(logout_url, {}, format="json")
+
+    assert res.status_code == 205
+
+
+@pytest.mark.django_db
 def test_logout_requires_auth(api_client, logout_url):
     res = api_client.post(logout_url, {}, format="json")
     assert res.status_code == 401
