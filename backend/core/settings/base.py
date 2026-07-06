@@ -153,3 +153,12 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+AUTH_REFRESH_COOKIE = "refresh_token"
+AUTH_REFRESH_COOKIE_PATH = "/api/users/"
+AUTH_REFRESH_COOKIE_HTTPONLY = True
+AUTH_REFRESH_COOKIE_SAMESITE = "Strict"
+# Dev runs over http; only mark Secure in production (see production.py).
+AUTH_REFRESH_COOKIE_SECURE = False
+
+CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="http://localhost:3000").split(",")

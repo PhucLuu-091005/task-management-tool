@@ -9,8 +9,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from apps.users.constants import MISSING_REFRESH_TOKEN_ERROR_MESSAGE, TOKEN_INVALID_ERROR_MESSAGE
+from apps.users.cookies import set_refresh_cookie
 from apps.users.managers import MEMBERSHIPS_PREFETCH
 from apps.users.permissions import IsAdmin
 from apps.users.serializers import RegisterSerializer, UserSerializer
@@ -43,6 +45,15 @@ class ProfileView(APIView):
     def get(self, request, *args, **kwargs):
         prefetch_related_objects([request.user], MEMBERSHIPS_PREFETCH)
         return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
+
+
+class CookieTokenObtainPairView(TokenObtainPairView):
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        refresh = response.data.pop("refresh", None)
+        if refresh:
+            set_refresh_cookie(response, refresh)
+        return response
 
 
 class LogoutView(APIView):
