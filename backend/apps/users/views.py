@@ -1,16 +1,20 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import prefetch_related_objects
-from drf_spectacular.types import OpenApiTypes
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers, status
 from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from apps.users.constants import MISSING_REFRESH_TOKEN_ERROR_MESSAGE, TOKEN_INVALID_ERROR_MESSAGE
+from apps.users.constants import REFRESH_COOKIE_MISSING_ERROR_MESSAGE
+from apps.users.cookies import delete_refresh_cookie, set_refresh_cookie
 from apps.users.managers import MEMBERSHIPS_PREFETCH
 from apps.users.permissions import IsAdmin
 from apps.users.serializers import RegisterSerializer, UserSerializer
@@ -45,23 +49,70 @@ class ProfileView(APIView):
         return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
 
 
+class CookieTokenObtainPairView(TokenObtainPairView):
+    @extend_schema(
+        responses=inline_serializer(
+            name="AccessTokenResponse", fields={"access": serializers.CharField()}
+        ),
+    )
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        refresh = response.data.pop("refresh", None)
+        if refresh:
+            set_refresh_cookie(response, refresh)
+        return response
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class CookieTokenRefreshView(TokenRefreshView):
+    @extend_schema(
+        request=None,
+        responses=inline_serializer(
+            name="RefreshResponse", fields={"access": serializers.CharField()}
+        ),
+    )
+    def post(self, request, *args, **kwargs):
+        token = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE)
+        if not token:
+            return Response(
+                {"detail": REFRESH_COOKIE_MISSING_ERROR_MESSAGE},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        serializer = self.get_serializer(data={"refresh": token})
+        try:
+            # Blacklist checks raise a raw TokenError DRF can't map to a response;
+            # mirror TokenViewBase.post's conversion to InvalidToken (401).
+            serializer.is_valid(raise_exception=True)
+        except TokenError as e:
+            raise InvalidToken(e.args[0]) from e
+        response = Response(serializer.validated_data, status=status.HTTP_200_OK)
+        rotated = response.data.pop("refresh", None)
+        if rotated:
+            set_refresh_cookie(response, rotated)
+        return response
+
+
+@method_decorator(ensure_csrf_cookie, name="dispatch")
+class CSRFView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(responses={204: None})
+    def get(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@method_decorator(csrf_protect, name="dispatch")
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(
-        request=inline_serializer("LogoutRequest", fields={"refresh": serializers.CharField()}),
-        responses={205: None, 400: OpenApiTypes.OBJECT},
-    )
+    @extend_schema(request=None, responses={205: None})
     def post(self, request, *args, **kwargs):
-        try:
-            token = RefreshToken(request.data["refresh"])
-            token.blacklist()
-            return Response(status=status.HTTP_205_RESET_CONTENT)
-        except KeyError:
-            return Response(
-                {"refresh": MISSING_REFRESH_TOKEN_ERROR_MESSAGE}, status=status.HTTP_400_BAD_REQUEST
-            )
-        except TokenError:
-            return Response(
-                {"refresh": TOKEN_INVALID_ERROR_MESSAGE}, status=status.HTTP_400_BAD_REQUEST
-            )
+        response = Response(status=status.HTTP_205_RESET_CONTENT)
+        token = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE)
+        if token:
+            try:
+                RefreshToken(token).blacklist()
+            except TokenError:
+                pass
+        delete_refresh_cookie(response)
+        return response

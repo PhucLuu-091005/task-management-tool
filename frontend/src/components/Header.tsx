@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { buttonStyles } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
-import { logout } from "@/lib/auth";
+import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/hooks";
 
 const NAV_ITEMS = [
@@ -26,10 +26,11 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const { signOut } = useAuth();
   const { data: user } = useProfile();
 
   async function handleLogout() {
-    await logout();
+    await signOut();
     // Drop cached data so the next login can't flash the previous user's profile.
     queryClient.clear();
     router.replace("/login");

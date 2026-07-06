@@ -8,6 +8,11 @@ ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(",")
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
+# Auth/session/CSRF cookies must only travel over HTTPS in production.
+AUTH_REFRESH_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+
 # Attachment uploads go to a private S3 bucket; images are served via time-limited
 # presigned URLs. Credentials come from AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY in
 # the environment or an attached IAM role — never hard-coded here.
