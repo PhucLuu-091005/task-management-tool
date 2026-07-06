@@ -1,5 +1,7 @@
 import pytest
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from rest_framework.test import APIClient
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -72,24 +74,45 @@ def test_profile_avoids_n_plus_1_for_memberships(
 
 
 @pytest.mark.django_db
-def test_logout_blacklist_token(auth_client, logout_url, refresh_token):
-    res = auth_client.post(logout_url, {"refresh": refresh_token}, format="json")
+def test_logout_blacklists_refresh_from_cookie(login_url, logout_url, csrf_url, login_payload):
+    client = APIClient(enforce_csrf_checks=True)
+    login = client.post(login_url, login_payload, format="json")
+    access = login.data["access"]
+    refresh = client.cookies[settings.AUTH_REFRESH_COOKIE].value
+    client.get(csrf_url)
+    csrf = client.cookies["csrftoken"].value
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}", HTTP_X_CSRFTOKEN=csrf)
+
+    res = client.post(logout_url, {}, format="json")
+
     assert res.status_code == 205
+    assert client.cookies[settings.AUTH_REFRESH_COOKIE].value == ""
     with pytest.raises(TokenError):
-        RefreshToken(refresh_token).verify()
+        RefreshToken(refresh).verify()
 
 
 @pytest.mark.django_db
-def test_logout_without_refresh_token(auth_client, logout_url):
+def test_logout_without_cookie_is_idempotent(auth_client, logout_url):
     res = auth_client.post(logout_url, {}, format="json")
-    assert res.status_code == 400
-    assert "refresh" in res.data
+    assert res.status_code == 205
 
 
 @pytest.mark.django_db
 def test_logout_requires_auth(api_client, logout_url):
-    res = api_client.post(logout_url, {"refresh": "anything"}, format="json")
+    res = api_client.post(logout_url, {}, format="json")
     assert res.status_code == 401
+
+
+@pytest.mark.django_db
+def test_logout_without_csrf_returns_403(login_url, logout_url, login_payload):
+    client = APIClient(enforce_csrf_checks=True)
+    login = client.post(login_url, login_payload, format="json")
+    access = login.data["access"]
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+
+    res = client.post(logout_url, {}, format="json")
+
+    assert res.status_code == 403
 
 
 # User list (admin)
