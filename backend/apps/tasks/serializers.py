@@ -172,7 +172,11 @@ class TaskStatusSerializer(serializers.ModelSerializer):
                     )
                 )
             from_status = locked.status
-            instance = super().update(instance, validated_data)
+            # Scope the write to the field this endpoint owns; a full instance.save()
+            # would persist the stale get_object() snapshot and clobber a concurrent
+            # edit to title/description/assignee committed after get_object().
+            instance.status = to_status
+            instance.save(update_fields=["status", "updated_at"])
             TaskStatusEvent.objects.create(
                 task=instance,
                 from_status=from_status,
