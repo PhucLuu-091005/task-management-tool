@@ -4,7 +4,7 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.tasks.models import Task
+from apps.tasks.models import Task, TaskStatusEvent
 from apps.tasks.tests.helpers import team_task
 
 pytestmark = pytest.mark.django_db
@@ -30,6 +30,7 @@ def test_direct_user_assignee_updates_status(member_client, team_member, creator
         created_by=creator,
         assignee_type=Task.AssigneeType.USER,
         assignee_user=team_member,
+        status=Task.Status.IN_PROGRESS,
     )
 
     res = member_client.patch(_url(task), {"status": "done"})
@@ -42,7 +43,7 @@ def test_direct_user_assignee_updates_status(member_client, team_member, creator
 def test_creator_updates_status(creator_client, team, creator):
     task = team_task(creator, team)
 
-    res = creator_client.patch(_url(task), {"status": "done"})
+    res = creator_client.patch(_url(task), {"status": "in_progress"})
 
     assert res.status_code == 200
 
@@ -132,8 +133,68 @@ def test_unauthenticated_cannot_update_status(api_client, team, creator):
 def test_status_ignores_other_fields(member_client, team, creator):
     task = team_task(creator, team)
 
-    res = member_client.patch(_url(task), {"status": "done", "title": "hijacked"})
+    res = member_client.patch(_url(task), {"status": "in_progress", "title": "hijacked"})
 
     assert res.status_code == 200
     task.refresh_from_db()
     assert task.title == "Task"
+
+
+def test_transition_records_event_with_actor(member_client, team_member, creator):
+    task = Task.objects.create(
+        title="Task",
+        created_by=creator,
+        assignee_type=Task.AssigneeType.USER,
+        assignee_user=team_member,
+    )
+
+    res = member_client.patch(_url(task), {"status": "in_progress"})
+
+    assert res.status_code == 200
+    event = task.status_events.get()
+    assert event.from_status == Task.Status.NEW
+    assert event.to_status == Task.Status.IN_PROGRESS
+    assert event.changed_by == team_member
+
+
+def test_disallowed_transition_records_no_event(member_client, team, creator):
+    task = team_task(creator, team)  # status new
+
+    res = member_client.patch(_url(task), {"status": "done"})  # skips in_progress
+
+    assert res.status_code == 400
+    assert TaskStatusEvent.objects.filter(task=task).count() == 0
+    task.refresh_from_db()
+    assert task.status == Task.Status.NEW
+
+
+def test_overdue_to_done_records_event(member_client, team, creator):
+    task = team_task(creator, team, due_date=timezone.now() - timedelta(days=1))
+    Task.objects.filter(id=task.id).update(status=Task.Status.OVERDUE)
+
+    res = member_client.patch(_url(task), {"status": "done"})
+
+    assert res.status_code == 200
+    event = task.status_events.get()
+    assert event.from_status == Task.Status.OVERDUE
+    assert event.to_status == Task.Status.DONE
+
+
+def test_response_exposes_lifecycle_timestamps_and_events(member_client, team_member, creator):
+    task = Task.objects.create(
+        title="Task",
+        created_by=creator,
+        assignee_type=Task.AssigneeType.USER,
+        assignee_user=team_member,
+    )
+
+    started = member_client.patch(_url(task), {"status": "in_progress"})
+    assert started.data["started_at"] is not None
+    assert started.data["completed_at"] is None
+
+    finished = member_client.patch(_url(task), {"status": "done"})
+    assert finished.data["completed_at"] is not None
+    assert len(finished.data["status_events"]) == 2
+    first = finished.data["status_events"][0]
+    assert first["from_status"] == "new"
+    assert first["to_status"] == "in_progress"

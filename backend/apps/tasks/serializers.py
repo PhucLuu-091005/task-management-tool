@@ -1,9 +1,11 @@
 from django.core.validators import URLValidator
+from django.db import transaction
 from rest_framework import serializers
 
 from apps.tasks.constants import (
     ASSIGNEE_MISMATCH_ERROR_MESSAGE,
     ASSIGNEE_REQUIRED_ERROR_MESSAGE,
+    INVALID_STATUS_TRANSITION_ERROR_MESSAGE,
     MANUAL_STATUSES,
 )
 from apps.tasks.models import (
@@ -11,6 +13,7 @@ from apps.tasks.models import (
     Task,
     TaskAttachment,
     TaskLink,
+    TaskStatusEvent,
 )
 from apps.tasks.validators import validate_attachment_size, validate_image_format
 
@@ -26,12 +29,22 @@ def _user_display_name(user) -> str:
     return f"{user.last_name} {user.first_name}".strip() or user.username
 
 
+class TaskStatusEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TaskStatusEvent
+        fields = ["id", "from_status", "to_status", "changed_by", "changed_at"]
+        read_only_fields = fields
+
+
 class TaskSerializer(serializers.ModelSerializer):
     is_overdue = serializers.BooleanField(read_only=True)
     assignee_user_name = serializers.SerializerMethodField()
     assignee_team_name = serializers.SerializerMethodField()
     assignee_department_name = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
+    started_at = serializers.SerializerMethodField()
+    completed_at = serializers.SerializerMethodField()
+    status_events = TaskStatusEventSerializer(many=True, read_only=True)
 
     class Meta:
         model = Task
@@ -52,10 +65,31 @@ class TaskSerializer(serializers.ModelSerializer):
             "created_by_name",
             "due_date",
             "is_overdue",
+            "assigned_at",
+            "started_at",
+            "completed_at",
+            "status_events",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "status", "created_by", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "status",
+            "created_by",
+            "assigned_at",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_started_at(self, obj):
+        # First entry into in_progress; None until the task is started.
+        events = [e for e in obj.status_events.all() if e.to_status == Task.Status.IN_PROGRESS]
+        return events[0].changed_at if events else None
+
+    def get_completed_at(self, obj):
+        # Latest entry into done; a reopened-then-redone task keeps the most recent.
+        events = [e for e in obj.status_events.all() if e.to_status == Task.Status.DONE]
+        return events[-1].changed_at if events else None
 
     def get_assignee_user_name(self, obj) -> str | None:
         return _user_display_name(obj.assignee_user) if obj.assignee_user_id else None
@@ -115,6 +149,41 @@ class TaskStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = ["status"]
+
+    def validate_status(self, value: str) -> str:
+        current = self.instance.status
+        if not Task.can_transition(current, value):
+            raise serializers.ValidationError(
+                INVALID_STATUS_TRANSITION_ERROR_MESSAGE.format(from_status=current, to_status=value)
+            )
+        return value
+
+    def update(self, instance, validated_data):
+        to_status = validated_data["status"]
+        with transaction.atomic():
+            # Re-read under a row lock and re-validate: status may have changed
+            # (e.g. a concurrent overdue flip) between get_object() and here, so
+            # the transition and its recorded from_status stay consistent.
+            locked = Task.objects.select_for_update().get(pk=instance.pk)
+            if not Task.can_transition(locked.status, to_status):
+                raise serializers.ValidationError(
+                    INVALID_STATUS_TRANSITION_ERROR_MESSAGE.format(
+                        from_status=locked.status, to_status=to_status
+                    )
+                )
+            from_status = locked.status
+            # Scope the write to the field this endpoint owns; a full instance.save()
+            # would persist the stale get_object() snapshot and clobber a concurrent
+            # edit to title/description/assignee committed after get_object().
+            instance.status = to_status
+            instance.save(update_fields=["status", "updated_at"])
+            TaskStatusEvent.objects.create(
+                task=instance,
+                from_status=from_status,
+                to_status=to_status,
+                changed_by=self.context["request"].user,
+            )
+        return instance
 
 
 class TaskLinkSerializer(serializers.ModelSerializer):

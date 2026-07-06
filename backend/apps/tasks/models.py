@@ -20,6 +20,15 @@ class Task(models.Model):
         TEAM = "team", "Team"
         DEPARTMENT = "department", "Department"
 
+    # Manual status lifecycle. overdue is omitted as a target: it is system-managed by
+    # flip_overdue_tasks and only ever cleared by moving to in_progress/done.
+    ALLOWED_TRANSITIONS = {
+        Status.NEW: {Status.IN_PROGRESS},
+        Status.IN_PROGRESS: {Status.DONE},
+        Status.DONE: set(),
+        Status.OVERDUE: {Status.IN_PROGRESS, Status.DONE},
+    }
+
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.NEW)
@@ -54,6 +63,7 @@ class Task(models.Model):
         related_name="created_tasks",
     )
     due_date = models.DateTimeField(null=True, blank=True)
+    assigned_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -62,6 +72,10 @@ class Task(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+    @classmethod
+    def can_transition(cls, from_status: str, to_status: str) -> bool:
+        return to_status in cls.ALLOWED_TRANSITIONS.get(from_status, set())
 
     @property
     def is_overdue(self) -> bool:
@@ -72,6 +86,26 @@ class Task(models.Model):
 
 TASK_LINK_URL_MAX_LENGTH = 500
 TASK_LINK_LABEL_MAX_LENGTH = 200
+
+
+class TaskStatusEvent(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="status_events")
+    from_status = models.CharField(max_length=20, choices=Task.Status.choices)
+    to_status = models.CharField(max_length=20, choices=Task.Status.choices)
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="task_status_changes",
+    )
+    changed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["changed_at", "id"]
+
+    def __str__(self) -> str:
+        return f"Task {self.task_id}: {self.from_status} -> {self.to_status}"
 
 
 class TaskLink(models.Model):
