@@ -1,17 +1,34 @@
+import os
+
 from decouple import config
 
 from .base import *
 
 DEBUG = False
-ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(",")
+
+ALLOWED_HOSTS = [h for h in config("ALLOWED_HOSTS", default="").split(",") if h]
+# Render injects the service's public hostname; trust it so the app boots even
+# before ALLOWED_HOSTS is set by hand.
+_render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+if _render_host:
+    ALLOWED_HOSTS.append(_render_host)
 
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# TLS is terminated at the platform's proxy, so trust its forwarded scheme —
+# without this Django sees plain HTTP and won't honour the Secure cookies below.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Auth/session/CSRF cookies must only travel over HTTPS in production.
 AUTH_REFRESH_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
+
+# gunicorn doesn't serve static files; WhiteNoise does. It sits right after
+# SecurityMiddleware per WhiteNoise's documented ordering.
+MIDDLEWARE = MIDDLEWARE[:2] + ["whitenoise.middleware.WhiteNoiseMiddleware"] + MIDDLEWARE[2:]
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Attachment uploads go to a private S3 bucket; images are served via time-limited
 # presigned URLs. Credentials come from AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY in
@@ -35,5 +52,8 @@ STORAGES = {
             "querystring_expire": AWS_PRESIGNED_EXPIRY,
             "file_overwrite": False,
         },
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }

@@ -1,0 +1,36 @@
+name: Deploy
+
+# Continuous deployment: fire only after the CI workflow finishes successfully on
+# master, so a red build never reaches Render. Deploys are triggered through each
+# service's Render Deploy Hook (stored as repo secrets), which is why the Blueprint
+# keeps autoDeploy off.
+#
+# Prefer tag-based releases instead? Replace the trigger with:
+#   on:
+#     push:
+#       tags: ["v*"]
+# and drop the `if:` guard below.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [master]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger backend deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}
+        run: curl -fsS -X POST "$HOOK"
+
+      - name: Trigger frontend deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_FRONTEND }}
+        run: curl -fsS -X POST "$HOOK"
