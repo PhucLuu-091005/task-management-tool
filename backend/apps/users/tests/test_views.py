@@ -92,15 +92,7 @@ def test_logout_blacklists_refresh_from_cookie(login_url, logout_url, csrf_url, 
 
 
 @pytest.mark.django_db
-def test_logout_without_cookie_is_idempotent(auth_client, logout_url):
-    res = auth_client.post(logout_url, {}, format="json")
-    assert res.status_code == 205
-
-
-@pytest.mark.django_db
-def test_logout_without_cookie_with_csrf_is_idempotent(
-    login_url, logout_url, csrf_url, login_payload
-):
+def test_logout_without_cookie_is_idempotent(login_url, logout_url, csrf_url, login_payload):
     client = APIClient(enforce_csrf_checks=True)
     login = client.post(login_url, login_payload, format="json")
     access = login.data["access"]
