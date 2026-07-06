@@ -39,7 +39,7 @@ let refreshPromise: Promise<string> | null = null;
 async function doRefresh(): Promise<string> {
   await ensureCsrfToken();
   const res = await axios.post(
-    "/api/users/token/refresh",
+    "/api/users/token/refresh/",
     {},
     {
       withCredentials: true,
