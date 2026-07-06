@@ -3,8 +3,8 @@ from django.contrib.auth import get_user_model
 from django.db.models import prefetch_related_objects
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
-from drf_spectacular.utils import extend_schema
-from rest_framework import status
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers, status
 from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -50,6 +50,11 @@ class ProfileView(APIView):
 
 
 class CookieTokenObtainPairView(TokenObtainPairView):
+    @extend_schema(
+        responses=inline_serializer(
+            name="AccessTokenResponse", fields={"access": serializers.CharField()}
+        ),
+    )
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         refresh = response.data.pop("refresh", None)
@@ -60,6 +65,12 @@ class CookieTokenObtainPairView(TokenObtainPairView):
 
 @method_decorator(csrf_protect, name="dispatch")
 class CookieTokenRefreshView(TokenRefreshView):
+    @extend_schema(
+        request=None,
+        responses=inline_serializer(
+            name="RefreshResponse", fields={"access": serializers.CharField()}
+        ),
+    )
     def post(self, request, *args, **kwargs):
         token = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE)
         if not token:
@@ -85,6 +96,7 @@ class CookieTokenRefreshView(TokenRefreshView):
 class CSRFView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(responses={204: None})
     def get(self, request, *args, **kwargs):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
