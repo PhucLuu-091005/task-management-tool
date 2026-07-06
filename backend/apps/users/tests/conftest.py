@@ -99,3 +99,18 @@ def user_list_url():
 @pytest.fixture
 def refresh_token(user):
     return str(RefreshToken.for_user(user))
+
+
+@pytest.fixture
+def login_payload(user):
+    return {"username": user.username, "password": "LatotheLuungolZai@@@@@"}
+
+
+@pytest.fixture
+def refresh_url():
+    return reverse("token_refresh")
+
+
+@pytest.fixture
+def csrf_url():
+    return reverse("csrf")
