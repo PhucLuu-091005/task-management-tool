@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -14,11 +15,14 @@ export function useProfile() {
   });
 }
 
-export function useRequireAuth(isError = false) {
+export function useRequireAuth(error?: unknown) {
   const router = useRouter();
 
+  // Only an actual 401 means the session is gone; other errors (500, network)
+  // are data failures the page renders in place, not a reason to sign out.
+  const unauthorized = isAxiosError(error) && error.response?.status === 401;
+
   useEffect(() => {
-    // isError covers the case where the refresh flow failed and tokens were cleared.
-    if (!hasSession() || isError) router.replace("/login");
-  }, [router, isError]);
+    if (!hasSession() || unauthorized) router.replace("/login");
+  }, [router, unauthorized]);
 }

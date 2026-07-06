@@ -8,40 +8,54 @@ import Header from "@/components/Header";
 import { StatusBadge } from "@/components/ui/Badge";
 import { buttonStyles } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { apiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { assigneeLabel, formatDateTime, priorityLabel } from "@/lib/labels";
 import { useRequireAuth } from "@/lib/hooks";
 import { useTasks, useUpdateTaskStatus } from "@/lib/tasks";
 import { Task, TaskStatus } from "@/lib/types";
 
-const PAGE_SIZE = 20;
-
 const controlClass =
   "rounded-ctrl border border-line-strong bg-card px-2.5 py-1.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-4 focus:ring-line";
 
 function StatusControl({ task }: { task: Task }) {
   const updateStatus = useUpdateTaskStatus();
+  const [error, setError] = useState<string | null>(null);
 
   return (
-    <select
-      value={task.status}
-      disabled={updateStatus.isPending}
-      onChange={(e) =>
-        updateStatus.mutate({ id: task.id, status: e.target.value as TaskStatus })
-      }
-      onClick={(e) => e.stopPropagation()}
-      className={controlClass}
-      aria-label={`Trạng thái: ${task.title}`}
-    >
-      <option value="new">Mới</option>
-      <option value="in_progress">Đang xử lý</option>
-      <option value="done">Hoàn thành</option>
-      {task.status === "overdue" && (
-        <option value="overdue" disabled>
-          Quá hạn
-        </option>
+    <div className="flex flex-col items-end gap-1">
+      <select
+        value={task.status}
+        disabled={updateStatus.isPending}
+        onChange={(e) => {
+          setError(null);
+          updateStatus.mutate(
+            { id: task.id, status: e.target.value as TaskStatus },
+            {
+              onError: (err) =>
+                setError(apiErrorMessage(err, "Không đổi được trạng thái.")),
+            },
+          );
+        }}
+        onClick={(e) => e.stopPropagation()}
+        className={controlClass}
+        aria-label={`Trạng thái: ${task.title}`}
+      >
+        <option value="new">Mới</option>
+        <option value="in_progress">Đang xử lý</option>
+        <option value="done">Hoàn thành</option>
+        {task.status === "overdue" && (
+          <option value="overdue" disabled>
+            Quá hạn
+          </option>
+        )}
+      </select>
+      {error && (
+        <span className="max-w-[12rem] text-right text-xs text-status-over">
+          {error}
+        </span>
       )}
-    </select>
+    </div>
   );
 }
 
@@ -56,8 +70,6 @@ export default function TasksPage() {
   // error to render in place, not a reason to bounce the user to /login.
   useRequireAuth();
   const { data, isPending, isError } = useTasks({ page, search, status, priority });
-
-  const totalPages = data ? Math.max(1, Math.ceil(data.count / PAGE_SIZE)) : 1;
 
   function handleSearch(e: FormEvent) {
     e.preventDefault();
@@ -162,7 +174,7 @@ export default function TasksPage() {
         {data && data.count > 0 && (
           <div className="flex items-center justify-between text-sm text-muted">
             <span>
-              {data.count} công việc · Trang {page}/{totalPages}
+              {data.count} công việc · Trang {page}
             </span>
             <div className="flex gap-2">
               <button

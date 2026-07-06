@@ -20,6 +20,7 @@ export default function RegisterPage() {
     username: "",
     password: "",
   });
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,6 +36,10 @@ export default function RegisterPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (form.password !== confirmPassword) {
+      setError("Mật khẩu nhập lại không khớp.");
+      return;
+    }
     setSubmitting(true);
     try {
       await register(form);
@@ -107,6 +112,17 @@ export default function RegisterPage() {
               type="password"
               value={form.password}
               onChange={setField("password")}
+              required
+              minLength={8}
+              className={fieldInput}
+            />
+          </Field>
+          <Field label="Nhập lại mật khẩu" htmlFor="confirm_password">
+            <input
+              id="confirm_password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               required
               minLength={8}
               className={fieldInput}

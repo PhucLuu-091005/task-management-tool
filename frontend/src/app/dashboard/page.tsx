@@ -34,8 +34,8 @@ const BAR_COLOR = "#14151a";
 const GRID_COLOR = "#eaeaec";
 
 export default function DashboardPage() {
-  const { data: stats, isPending, isError } = useTaskStats();
-  useRequireAuth(isError);
+  const { data: stats, isPending, isError, error } = useTaskStats();
+  useRequireAuth(error);
 
   const { data: me } = useProfile();
   const isAdmin = me?.is_admin ?? false;
@@ -59,7 +59,18 @@ export default function DashboardPage() {
     return departments?.find((d) => d.id === id)?.name ?? `Phòng #${id}`;
   }
 
-  if (isPending || isError || !stats) {
+  if (isError) {
+    return (
+      <main className="min-h-screen">
+        <Header />
+        <p className="py-16 text-center text-sm text-status-over">
+          Không tải được thống kê. Vui lòng thử lại.
+        </p>
+      </main>
+    );
+  }
+
+  if (isPending || !stats) {
     return (
       <main className="min-h-screen">
         <Header />

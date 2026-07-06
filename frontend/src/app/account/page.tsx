@@ -6,10 +6,20 @@ import { Card } from "@/components/ui/Card";
 import { useProfile, useRequireAuth } from "@/lib/hooks";
 
 export default function AccountPage() {
-  const { data: user, isPending, isError } = useProfile();
-  useRequireAuth(isError);
+  const { data: user, isPending, isError, error } = useProfile();
+  useRequireAuth(error);
 
-  if (isPending || isError || !user) {
+  if (isError) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-status-over">
+          Không tải được thông tin tài khoản. Vui lòng thử lại.
+        </p>
+      </main>
+    );
+  }
+
+  if (isPending || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <p className="text-sm text-muted">Đang tải…</p>
