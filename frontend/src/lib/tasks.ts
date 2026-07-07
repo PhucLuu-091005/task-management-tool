@@ -18,7 +18,6 @@ export interface TaskListParams {
   assigneeUser: string;
   team: string;
   department: string;
-  isOverdue: boolean;
 }
 
 export function useTasks(params: TaskListParams) {
@@ -35,7 +34,6 @@ export function useTasks(params: TaskListParams) {
       else if (params.team) query.team = params.team;
       else if (params.department) query.department = params.department;
       else if (params.assigneeType) query.assignee_type = params.assigneeType;
-      if (params.isOverdue) query.is_overdue = "true";
       return (await api.get("/tasks/", { params: query })).data;
     },
     placeholderData: keepPreviousData,

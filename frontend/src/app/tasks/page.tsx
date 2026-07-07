@@ -73,14 +73,13 @@ export default function TasksPage() {
   const [priority, setPriority] = useState("");
   const [assigneeType, setAssigneeType] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
-  const [isOverdue, setIsOverdue] = useState(false);
 
   // Auth is guarded by session presence only — a failing list fetch is a data
   // error to render in place, not a reason to bounce the user to /login.
   useRequireAuth();
   const { data: profile } = useProfile();
   // Assignee choice lists are admin-only; non-admins only see status/priority/
-  // search/overdue. Each list loads only once its assignee type is selected.
+  // search. Each list loads only once its assignee type is selected.
   const isAdmin = !!profile?.is_admin;
   const { data: users } = useUsers(isAdmin && assigneeType === "user");
   const { data: teams } = useTeams(isAdmin && assigneeType === "team");
@@ -103,7 +102,6 @@ export default function TasksPage() {
     assigneeUser: assigneeType === "user" ? assigneeId : "",
     team: assigneeType === "team" ? assigneeId : "",
     department: assigneeType === "department" ? assigneeId : "",
-    isOverdue,
   });
 
   function handleSearch(e: FormEvent) {
@@ -234,19 +232,6 @@ export default function TasksPage() {
               )}
             </>
           )}
-
-          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-muted">
-            <input
-              type="checkbox"
-              checked={isOverdue}
-              onChange={(e) => {
-                setIsOverdue(e.target.checked);
-                setPage(1);
-              }}
-              className="h-4 w-4 rounded border-line-strong accent-ink"
-            />
-            Trễ hạn
-          </label>
         </div>
 
         {isPending ? (
