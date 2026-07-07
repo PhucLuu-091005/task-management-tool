@@ -5,7 +5,7 @@
 # runs the full CI suite on that commit and only ships if every check is green.
 #
 # Env vars marked `sync: false` are NOT stored here — Render prompts you to fill
-# them in the dashboard. See DEPLOY.md for the full checklist and ordering.
+# them in the dashboard.
 
 databases:
   - name: taskapp-db
