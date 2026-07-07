@@ -1,0 +1,32 @@
+name: Deploy
+
+# Tag-based release: push a version tag (e.g. `v1.2.0`) to ship. The tagged commit
+# runs the full CI suite first (reused via `workflow_call`), and the deploy job only
+# runs once every check is green — so a tag on a red commit never reaches Render.
+# Deploys fire each service's Render Deploy Hook (repo secrets), which is why the
+# Blueprint keeps autoDeploy off.
+on:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger backend deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}
+        run: curl -fsS -X POST "$HOOK"
+
+      - name: Trigger frontend deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_FRONTEND }}
+        run: curl -fsS -X POST "$HOOK"

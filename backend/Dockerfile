@@ -23,4 +23,8 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Render (and most PaaS) inject the port to bind on via $PORT; default to 8000 for
+# local `docker run`. Migrate + collectstatic run on boot so a fresh deploy is
+# self-contained; WhiteNoise serves the collected static (gunicorn won't).
+ENV DJANGO_SETTINGS_MODULE=core.settings.production
+CMD ["sh", "-c", "uv run python manage.py migrate --noinput && uv run python manage.py collectstatic --noinput && exec uv run gunicorn core.wsgi:application --bind 0.0.0.0:${PORT:-8000}"]
