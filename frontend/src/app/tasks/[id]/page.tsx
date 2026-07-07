@@ -9,11 +9,12 @@ import Header from "@/components/Header";
 import TaskAttachments from "@/components/TaskAttachments";
 import TaskForm from "@/components/TaskForm";
 import TaskLinks from "@/components/TaskLinks";
+import TaskStatusControl from "@/components/TaskStatusControl";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { apiErrorMessage } from "@/lib/api";
-import { assigneeLabel, formatDateTime } from "@/lib/labels";
+import { assigneeLabel, formatDateTime, priorityLabel } from "@/lib/labels";
 import { useProfile, useRequireAuth } from "@/lib/hooks";
 import { useDeleteTask, useTask, useUpdateTask } from "@/lib/tasks";
 import { TaskPayload } from "@/lib/types";
@@ -110,7 +111,17 @@ export default function TaskDetailPage() {
             ) : (
               <>
                 <Card className="p-6 text-sm">
-                  <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+                  <div className="flex items-center justify-between gap-3 border-b border-line pb-4">
+                    <span className="text-muted">Trạng thái</span>
+                    <TaskStatusControl task={task} />
+                  </div>
+                  <dl className="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+                    <div>
+                      <dt className="text-muted">Độ ưu tiên</dt>
+                      <dd className="mt-1 font-medium">
+                        {priorityLabel(task.priority)}
+                      </dd>
+                    </div>
                     <div>
                       <dt className="text-muted">Hạn hoàn thành</dt>
                       <dd className="mt-1 font-medium">
@@ -122,6 +133,28 @@ export default function TaskDetailPage() {
                         )}
                       </dd>
                     </div>
+                    <div>
+                      <dt className="text-muted">Giao lúc</dt>
+                      <dd className="mt-1 font-medium">
+                        {formatDateTime(task.assigned_at)}
+                      </dd>
+                    </div>
+                    {task.started_at && (
+                      <div>
+                        <dt className="text-muted">Bắt đầu</dt>
+                        <dd className="mt-1 font-medium">
+                          {formatDateTime(task.started_at)}
+                        </dd>
+                      </div>
+                    )}
+                    {task.completed_at && (
+                      <div>
+                        <dt className="text-muted">Hoàn thành</dt>
+                        <dd className="mt-1 font-medium">
+                          {formatDateTime(task.completed_at)}
+                        </dd>
+                      </div>
+                    )}
                     <div>
                       <dt className="text-muted">Ngày tạo</dt>
                       <dd className="mt-1 font-medium">
