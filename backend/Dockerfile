@@ -23,4 +23,7 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Default (web) start: migrate + seed admin + serve. docker-compose overrides
+# this per service, so the migrate here only runs on hosts that use the image
+# CMD directly (e.g. Render).
+CMD ["sh", "/app/deploy/web-entrypoint.sh"]
