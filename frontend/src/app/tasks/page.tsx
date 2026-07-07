@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 
+import CreateTaskModal from "@/components/CreateTaskModal";
 import Header from "@/components/Header";
 import { StatusBadge } from "@/components/ui/Badge";
 import { buttonStyles } from "@/components/ui/Button";
@@ -73,6 +74,7 @@ export default function TasksPage() {
   const [priority, setPriority] = useState("");
   const [assigneeType, setAssigneeType] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
+  const [creating, setCreating] = useState(false);
 
   // Auth is guarded by session presence only — a failing list fetch is a data
   // error to render in place, not a reason to bounce the user to /login.
@@ -116,10 +118,14 @@ export default function TasksPage() {
       <div className="mx-auto max-w-5xl space-y-5 px-4 py-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-lg font-semibold tracking-tight">Công việc</h1>
-          <Link href="/tasks/new" className={buttonStyles("primary", "md")}>
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className={buttonStyles("primary", "md")}
+          >
             <Plus className="h-4 w-4" strokeWidth={2} />
             Tạo công việc
-          </Link>
+          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -300,6 +306,11 @@ export default function TasksPage() {
             </div>
           </div>
         )}
+
+        <CreateTaskModal
+          open={creating}
+          onClose={() => setCreating(false)}
+        />
       </div>
     </main>
   );
