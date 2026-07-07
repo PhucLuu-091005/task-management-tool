@@ -52,6 +52,11 @@ services:
     ports:
       - "3000:3000"
     environment:
+      # Server-side proxy target (next.config.mjs rewrites /api/*). Must reach the
+      # backend over the compose network — inside this container localhost is the
+      # frontend itself, so localhost:8000 refuses the connection.
+      - BACKEND_INTERNAL_URL=http://backend:8000
+      # Browser-facing base (Playwright/direct calls); the app itself uses the proxy.
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     depends_on:
       - backend
