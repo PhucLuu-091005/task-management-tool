@@ -14,6 +14,11 @@ export interface TaskListParams {
   search: string;
   status: string;
   priority: string;
+  assigneeType: string;
+  assigneeUser: string;
+  team: string;
+  department: string;
+  isOverdue: boolean;
 }
 
 export function useTasks(params: TaskListParams) {
@@ -24,6 +29,13 @@ export function useTasks(params: TaskListParams) {
       if (params.search) query.search = params.search;
       if (params.status) query.status = params.status;
       if (params.priority) query.priority = params.priority;
+      // A specific assignee narrows more than its type, so it wins; the bare
+      // type filter only applies when no concrete assignee is chosen.
+      if (params.assigneeUser) query.assignee_user = params.assigneeUser;
+      else if (params.team) query.team = params.team;
+      else if (params.department) query.department = params.department;
+      else if (params.assigneeType) query.assignee_type = params.assigneeType;
+      if (params.isOverdue) query.is_overdue = "true";
       return (await api.get("/tasks/", { params: query })).data;
     },
     placeholderData: keepPreviousData,

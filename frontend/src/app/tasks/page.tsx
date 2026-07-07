@@ -10,8 +10,14 @@ import { buttonStyles } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { apiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { assigneeLabel, formatDateTime, priorityLabel } from "@/lib/labels";
-import { useRequireAuth } from "@/lib/hooks";
+import {
+  assigneeLabel,
+  formatDateTime,
+  priorityLabel,
+  userDisplayName,
+} from "@/lib/labels";
+import { useProfile, useRequireAuth } from "@/lib/hooks";
+import { useDepartments, useTeams, useUsers } from "@/lib/org";
 import { useTasks, useUpdateTaskStatus } from "@/lib/tasks";
 import { Task, TaskStatus } from "@/lib/types";
 
@@ -65,11 +71,40 @@ export default function TasksPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
+  const [assigneeType, setAssigneeType] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
+  const [isOverdue, setIsOverdue] = useState(false);
 
   // Auth is guarded by session presence only — a failing list fetch is a data
   // error to render in place, not a reason to bounce the user to /login.
   useRequireAuth();
-  const { data, isPending, isError } = useTasks({ page, search, status, priority });
+  const { data: profile } = useProfile();
+  // Assignee choice lists are admin-only; non-admins only see status/priority/
+  // search/overdue. Each list loads only once its assignee type is selected.
+  const isAdmin = !!profile?.is_admin;
+  const { data: users } = useUsers(isAdmin && assigneeType === "user");
+  const { data: teams } = useTeams(isAdmin && assigneeType === "team");
+  const { data: departments } = useDepartments(
+    isAdmin && assigneeType === "department",
+  );
+
+  function resetAssigneeType(next: string) {
+    setAssigneeType(next);
+    setAssigneeId("");
+    setPage(1);
+  }
+
+  const { data, isPending, isError } = useTasks({
+    page,
+    search,
+    status,
+    priority,
+    assigneeType,
+    assigneeUser: assigneeType === "user" ? assigneeId : "",
+    team: assigneeType === "team" ? assigneeId : "",
+    department: assigneeType === "department" ? assigneeId : "",
+    isOverdue,
+  });
 
   function handleSearch(e: FormEvent) {
     e.preventDefault();
@@ -128,6 +163,90 @@ export default function TasksPage() {
             <option value="medium">Trung bình</option>
             <option value="high">Cao</option>
           </select>
+
+          {isAdmin && (
+            <>
+              <select
+                value={assigneeType}
+                onChange={(e) => resetAssigneeType(e.target.value)}
+                className={controlClass}
+                aria-label="Lọc theo loại người nhận"
+              >
+                <option value="">Mọi người nhận</option>
+                <option value="user">Người</option>
+                <option value="team">Nhóm</option>
+                <option value="department">Phòng ban</option>
+              </select>
+
+              {assigneeType === "user" && (
+                <select
+                  value={assigneeId}
+                  onChange={(e) => {
+                    setAssigneeId(e.target.value);
+                    setPage(1);
+                  }}
+                  className={controlClass}
+                  aria-label="Lọc theo người"
+                >
+                  <option value="">Mọi người</option>
+                  {users?.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {userDisplayName(u)}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {assigneeType === "team" && (
+                <select
+                  value={assigneeId}
+                  onChange={(e) => {
+                    setAssigneeId(e.target.value);
+                    setPage(1);
+                  }}
+                  className={controlClass}
+                  aria-label="Lọc theo nhóm"
+                >
+                  <option value="">Mọi nhóm</option>
+                  {teams?.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {assigneeType === "department" && (
+                <select
+                  value={assigneeId}
+                  onChange={(e) => {
+                    setAssigneeId(e.target.value);
+                    setPage(1);
+                  }}
+                  className={controlClass}
+                  aria-label="Lọc theo phòng ban"
+                >
+                  <option value="">Mọi phòng ban</option>
+                  {departments?.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </>
+          )}
+
+          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-muted">
+            <input
+              type="checkbox"
+              checked={isOverdue}
+              onChange={(e) => {
+                setIsOverdue(e.target.checked);
+                setPage(1);
+              }}
+              className="h-4 w-4 rounded border-line-strong accent-ink"
+            />
+            Trễ hạn
+          </label>
         </div>
 
         {isPending ? (

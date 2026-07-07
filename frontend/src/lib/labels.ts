@@ -1,4 +1,4 @@
-import { Task, TaskPriority, TaskStatus } from "@/lib/types";
+import { Task, TaskPriority, TaskStatus, User } from "@/lib/types";
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   new: "Mới",
@@ -31,6 +31,13 @@ export const PRIORITY_LABELS: Record<Exclude<TaskPriority, "">, string> = {
 
 export function priorityLabel(priority: TaskPriority): string {
   return priority ? PRIORITY_LABELS[priority] : "—";
+}
+
+// Vietnamese name order (family name first), falling back to the username.
+export function userDisplayName(
+  user: Pick<User, "first_name" | "last_name" | "username">,
+): string {
+  return `${user.last_name} ${user.first_name}`.trim() || user.username;
 }
 
 export function assigneeLabel(task: Task): string {
