@@ -43,17 +43,19 @@ export async function login(page: Page, user: TestUser): Promise<void> {
   await expect(page).toHaveURL(/\/tasks$/);
 }
 
-// Creates a task assigned to a user (by their display name in the dropdown) and
-// leaves the page on the new task's detail view. Caller must already be signed in
-// as someone allowed to create (admin/leader).
+// Opens the create-task modal from the list, fills it, and leaves the page on
+// the new task's detail view. Caller must already be signed in as someone
+// allowed to create (admin/leader).
 export async function createTask(
   page: Page,
   opts: { title: string; assigneeLabel: string; priority?: "low" | "medium" | "high" },
 ): Promise<void> {
-  await page.goto("/tasks/new");
-  await page.locator("#title").fill(opts.title);
-  if (opts.priority) await page.locator("#priority").selectOption(opts.priority);
-  await page.locator("#assignee_user").selectOption({ label: opts.assigneeLabel });
+  await page.goto("/tasks");
   await page.getByRole("button", { name: "Tạo công việc" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.locator("#title").fill(opts.title);
+  if (opts.priority) await dialog.locator("#priority").selectOption(opts.priority);
+  await dialog.locator("#assignee_user").selectOption({ label: opts.assigneeLabel });
+  await dialog.getByRole("button", { name: "Tạo công việc" }).click();
   await expect(page).toHaveURL(/\/tasks\/\d+$/);
 }
