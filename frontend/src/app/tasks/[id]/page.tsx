@@ -6,13 +6,15 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import Header from "@/components/Header";
+import TaskAttachments from "@/components/TaskAttachments";
 import TaskForm from "@/components/TaskForm";
+import TaskLinks from "@/components/TaskLinks";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { apiErrorMessage } from "@/lib/api";
 import { assigneeLabel, formatDateTime } from "@/lib/labels";
-import { useRequireAuth } from "@/lib/hooks";
+import { useProfile, useRequireAuth } from "@/lib/hooks";
 import { useDeleteTask, useTask, useUpdateTask } from "@/lib/tasks";
 import { TaskPayload } from "@/lib/types";
 
@@ -22,12 +24,21 @@ export default function TaskDetailPage() {
   const router = useRouter();
 
   const { data: task, isPending, isError } = useTask(taskId);
+  const { data: profile } = useProfile();
   useRequireAuth();
   const updateTask = useUpdateTask(taskId);
   const deleteTask = useDeleteTask();
 
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // UX-only heuristic for showing delete controls; the backend still enforces
+  // that only the uploader or a task editor may remove an attachment/link.
+  const canManageItem = (addedBy: number | null) =>
+    !!profile &&
+    (profile.is_admin ||
+      addedBy === profile.id ||
+      task?.created_by === profile.id);
 
   function handleUpdate(payload: TaskPayload) {
     setError(null);
@@ -127,6 +138,9 @@ export default function TaskDetailPage() {
                     </div>
                   )}
                 </Card>
+
+                <TaskAttachments taskId={task.id} canManage={canManageItem} />
+                <TaskLinks taskId={task.id} canManage={canManageItem} />
 
                 {error && <p className="text-sm text-status-over">{error}</p>}
 

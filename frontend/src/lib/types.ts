@@ -58,6 +58,27 @@ export interface TaskPayload {
   assignee_department: number | null;
 }
 
+export interface TaskLink {
+  id: number;
+  url: string;
+  label: string;
+  added_by: number | null;
+  created_at: string;
+}
+
+export interface LinkPayload {
+  url: string;
+  label: string;
+}
+
+export interface TaskAttachment {
+  id: number;
+  image: string;
+  caption: string;
+  added_by: number | null;
+  created_at: string;
+}
+
 export interface Paginated<T> {
   count: number;
   next: string | null;
