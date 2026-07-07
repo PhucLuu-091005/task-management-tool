@@ -84,19 +84,27 @@ Keep these four values for step 3: bucket name, access key, secret, endpoint URL
 | `EMAIL_USE_TLS` | `True` |
 | `DEFAULT_FROM_EMAIL` | `no-reply@yourapp.com` |
 
-## 4. Continuous deployment (CI-gated)
+## 4. Continuous deployment (tag-based, CI-gated)
 
-Deploys fire from GitHub Actions **only after CI passes on `master`** — a red build
-never ships. Wire it up once:
+Deploys fire from GitHub Actions **when you push a version tag** — and only after the
+full CI suite passes on that exact commit, so a red build never ships. Wire it up once:
 
 1. Render → each service → **Settings → Deploy Hook** → copy the URL (one per service).
 2. GitHub repo → **Settings → Secrets and variables → Actions → New secret**:
    - `RENDER_DEPLOY_HOOK_BACKEND` = backend deploy hook URL
    - `RENDER_DEPLOY_HOOK_FRONTEND` = frontend deploy hook URL
 
-From then on: push to `master` → CI runs → on green, both services redeploy.
+Cutting a release from then on:
 
-*Prefer tag-based releases?* See the comment at the top of `.github/workflows/deploy.yml`.
+```bash
+git checkout master && git pull
+git tag v1.0.0            # bump per release
+git push origin v1.0.0
+```
+
+The tag triggers `deploy.yml` → it reuses the CI pipeline (lint + test + e2e) on the
+tagged commit → on green, both services redeploy. Plain pushes to `master` still run
+CI for validation but no longer deploy.
 
 ---
 

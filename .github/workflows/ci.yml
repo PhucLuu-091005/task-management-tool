@@ -5,6 +5,8 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+  # Let the deploy workflow reuse this exact pipeline as the release gate.
+  workflow_call:
 
 env:
   # GitHub is forcing Node-20 actions onto Node 24 (~2026-06-16); opt in now.
