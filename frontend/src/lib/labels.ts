@@ -14,6 +14,15 @@ export const STATUS_BADGE_CLASSES: Record<TaskStatus, string> = {
   overdue: "bg-status-overbg text-status-over",
 };
 
+// Manual status machine, mirroring the backend's ALLOWED_TRANSITIONS. `overdue`
+// is system-set (the flip job), never a manual target, so it's absent as a value.
+export const ALLOWED_NEXT_STATUS: Record<TaskStatus, TaskStatus[]> = {
+  new: ["in_progress"],
+  in_progress: ["done"],
+  done: [],
+  overdue: ["in_progress", "done"],
+};
+
 export const PRIORITY_LABELS: Record<Exclude<TaskPriority, "">, string> = {
   low: "Thấp",
   medium: "Trung bình",

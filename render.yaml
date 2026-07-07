@@ -40,6 +40,15 @@ services:
       # Deep links in notification emails.
       - key: FRONTEND_URL
         sync: false
+      # Bootstrap admin: create_admin runs on every boot and seeds/promotes this
+      # account (idempotent; no-op when unset). Set these to provision the first
+      # admin, then clear the password once the account exists.
+      - key: INITIAL_ADMIN_USERNAME
+        sync: false
+      - key: INITIAL_ADMIN_PASSWORD
+        sync: false
+      - key: INITIAL_ADMIN_EMAIL
+        sync: false
       # --- Postgres (wired automatically from the managed DB above) ---
       - key: DB_HOST
         fromDatabase:

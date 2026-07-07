@@ -45,6 +45,9 @@ export interface Task {
   created_by_name: string;
   due_date: string | null;
   is_overdue: boolean;
+  assigned_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +61,27 @@ export interface TaskPayload {
   assignee_user: number | null;
   assignee_team: number | null;
   assignee_department: number | null;
+}
+
+export interface TaskLink {
+  id: number;
+  url: string;
+  label: string;
+  added_by: number | null;
+  created_at: string;
+}
+
+export interface LinkPayload {
+  url: string;
+  label: string;
+}
+
+export interface TaskAttachment {
+  id: number;
+  image: string;
+  caption: string;
+  added_by: number | null;
+  created_at: string;
 }
 
 export interface Paginated<T> {
