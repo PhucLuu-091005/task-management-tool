@@ -1,8 +1,8 @@
 # Render Blueprint — one-click infra for the demo stack.
 # Deploys: Django API (Docker) + Next.js proxy frontend (Node) + Postgres, all free.
-# autoDeploy is off: deploys are triggered by the CI-gated GitHub Actions workflow
-# (.github/workflows/deploy.yml) via each service's Deploy Hook, so only green
-# commits on master reach Render.
+# autoDeploy is off: deploys are triggered by the tag-based GitHub Actions workflow
+# (.github/workflows/deploy.yml) via each service's Deploy Hook — pushing a v* tag
+# runs the full CI suite on that commit and only ships if every check is green.
 #
 # Env vars marked `sync: false` are NOT stored here — Render prompts you to fill
 # them in the dashboard. See DEPLOY.md for the full checklist and ordering.
