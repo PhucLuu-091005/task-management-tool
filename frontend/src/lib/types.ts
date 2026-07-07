@@ -43,6 +43,9 @@ export interface Task {
   created_by_name: string;
   due_date: string | null;
   is_overdue: boolean;
+  assigned_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
 }
