@@ -1,7 +1,9 @@
+export type Role = "leader" | "member";
+
 export interface TeamMembership {
   team: number;
   team_name: string;
-  role: "leader" | "member";
+  role: Role;
 }
 
 export interface User {
@@ -72,8 +74,26 @@ export interface Team {
   description: string;
 }
 
+export interface TeamPayload {
+  name: string;
+  department: number;
+  description: string;
+}
+
 export interface Department {
   id: number;
   name: string;
   description: string;
+  lead: number | null;
+}
+
+export interface DepartmentPayload {
+  name: string;
+  description: string;
+  lead: number | null;
+}
+
+export interface TeamMemberPayload {
+  user: number;
+  role: Role;
 }

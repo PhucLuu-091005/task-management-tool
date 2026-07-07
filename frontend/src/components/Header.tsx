@@ -29,6 +29,10 @@ export default function Header() {
   const { signOut } = useAuth();
   const { data: user } = useProfile();
 
+  const navItems = user?.is_admin
+    ? [...NAV_ITEMS, { href: "/admin", label: "Quản trị" }]
+    : NAV_ITEMS;
+
   async function handleLogout() {
     await signOut();
     // Drop cached data so the next login can't flash the previous user's profile.
@@ -47,7 +51,7 @@ export default function Header() {
             <span className="text-[15px] font-semibold tracking-tight">Chốt</span>
           </Link>
           <nav className="hidden items-center gap-1 text-sm sm:flex">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const active = pathname.startsWith(item.href);
               return (
                 <Link
