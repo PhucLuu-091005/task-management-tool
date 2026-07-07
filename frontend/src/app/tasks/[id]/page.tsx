@@ -13,6 +13,7 @@ import TaskStatusControl from "@/components/TaskStatusControl";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ConfirmDialog } from "@/components/ui/Modal";
 import { apiErrorMessage } from "@/lib/api";
 import { assigneeLabel, formatDateTime, priorityLabel } from "@/lib/labels";
 import { useProfile, useRequireAuth } from "@/lib/hooks";
@@ -32,6 +33,8 @@ export default function TaskDetailPage() {
 
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // UX-only heuristic for showing delete controls; the backend still enforces
   // that only the uploader or a task editor may remove an attachment/link.
@@ -51,12 +54,14 @@ export default function TaskDetailPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Xoá công việc này?")) return;
+    setDeleteError(null);
     try {
       await deleteTask.mutateAsync(taskId);
       router.replace("/tasks");
     } catch (err) {
-      setError(apiErrorMessage(err, "Bạn không có quyền xoá công việc này."));
+      setDeleteError(
+        apiErrorMessage(err, "Bạn không có quyền xoá công việc này."),
+      );
     }
   }
 
@@ -192,13 +197,26 @@ export default function TaskDetailPage() {
                   <Button
                     variant="danger"
                     size="sm"
-                    onClick={handleDelete}
+                    onClick={() => {
+                      setDeleteError(null);
+                      setConfirmingDelete(true);
+                    }}
                     disabled={deleteTask.isPending}
                   >
                     <Trash2 className="h-4 w-4" strokeWidth={1.75} />
                     Xoá
                   </Button>
                 </div>
+
+                <ConfirmDialog
+                  open={confirmingDelete}
+                  title="Xoá công việc"
+                  message={`Xoá công việc "${task.title}"? Hành động này không thể hoàn tác.`}
+                  loading={deleteTask.isPending}
+                  error={deleteError}
+                  onConfirm={handleDelete}
+                  onCancel={() => setConfirmingDelete(false)}
+                />
               </>
             )}
           </>
