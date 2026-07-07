@@ -23,7 +23,10 @@ COPY . .
 
 EXPOSE 8000
 
-# Default (web) start: migrate + seed admin + serve. docker-compose overrides
-# this per service, so the migrate here only runs on hosts that use the image
-# CMD directly (e.g. Render).
-CMD ["sh", "/app/deploy/web-entrypoint.sh"]
+# Render (and most PaaS) inject the port to bind on via $PORT; default to 8000 for
+# local `docker run`. Migrate + create_admin + collectstatic run on boot so a fresh
+# deploy is self-contained; WhiteNoise serves the collected static (gunicorn won't).
+# create_admin seeds/promotes the bootstrap admin from INITIAL_ADMIN_* (no-op when
+# unset), covering hosts whose pre-deploy hook is paid-only (e.g. Render free tier).
+ENV DJANGO_SETTINGS_MODULE=core.settings.production
+CMD ["sh", "-c", "uv run python manage.py migrate --noinput && uv run python manage.py create_admin && uv run python manage.py collectstatic --noinput && exec uv run gunicorn core.wsgi:application --bind 0.0.0.0:${PORT:-8000}"]

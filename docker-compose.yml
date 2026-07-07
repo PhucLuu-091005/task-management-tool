@@ -17,9 +17,9 @@ services:
   backend:
     build: ./backend
     restart: unless-stopped
-    # Override the image CMD (which also migrates + seeds an admin): in compose,
-    # the cron service owns migrations so the two don't race.
-    command: ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+    # The image's CMD is the production gunicorn entrypoint; local dev wants the
+    # auto-reloading dev server against the mounted source instead.
+    command: ["sh", "-c", "uv run python manage.py migrate --noinput && uv run python manage.py runserver 0.0.0.0:8000"]
     ports:
       - "8000:8000"
     env_file:

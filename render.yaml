@@ -1,0 +1,102 @@
+# Render Blueprint — one-click infra for the demo stack.
+# Deploys: Django API (Docker) + Next.js proxy frontend (Node) + Postgres, all free.
+# autoDeploy is off: deploys are triggered by the tag-based GitHub Actions workflow
+# (.github/workflows/deploy.yml) via each service's Deploy Hook — pushing a v* tag
+# runs the full CI suite on that commit and only ships if every check is green.
+#
+# Env vars marked `sync: false` are NOT stored here — Render prompts you to fill
+# them in the dashboard.
+
+databases:
+  - name: taskapp-db
+    plan: free
+    region: singapore
+    databaseName: taskmanagement
+    user: taskmanagement
+
+services:
+  # ------------------------------------------------------------------ backend
+  - type: web
+    name: taskapp-backend
+    runtime: docker
+    plan: free
+    region: singapore
+    autoDeploy: false
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: core.settings.production
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      # Optional: the app already trusts RENDER_EXTERNAL_HOSTNAME automatically.
+      - key: ALLOWED_HOSTS
+        sync: false
+      # Must be the frontend's public origin — CSRF check for refresh/logout.
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      # Deep links in notification emails.
+      - key: FRONTEND_URL
+        sync: false
+      # Bootstrap admin: create_admin runs on every boot and seeds/promotes this
+      # account (idempotent; no-op when unset). Set these to provision the first
+      # admin, then clear the password once the account exists.
+      - key: INITIAL_ADMIN_USERNAME
+        sync: false
+      - key: INITIAL_ADMIN_PASSWORD
+        sync: false
+      - key: INITIAL_ADMIN_EMAIL
+        sync: false
+      # --- Postgres (wired automatically from the managed DB above) ---
+      - key: DB_HOST
+        fromDatabase:
+          name: taskapp-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: taskapp-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: taskapp-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: taskapp-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: taskapp-db
+          property: password
+      # --- Image attachments: S3 / Cloudflare R2 (REQUIRED — app won't boot without a bucket) ---
+      - key: AWS_STORAGE_BUCKET_NAME
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_REGION_NAME
+        sync: false
+      # Set for Cloudflare R2 / MinIO; leave unset for real AWS S3.
+      - key: AWS_S3_ENDPOINT_URL
+        sync: false
+
+  # ------------------------------------------------------------------ frontend
+  - type: web
+    name: taskapp-frontend
+    runtime: node
+    plan: free
+    region: singapore
+    autoDeploy: false
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # The Next server proxies /api/* here. Paste the backend's public URL
+      # (https://taskapp-backend.onrender.com) once the backend exists.
+      - key: BACKEND_INTERNAL_URL
+        sync: false
