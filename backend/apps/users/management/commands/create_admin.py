@@ -13,8 +13,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         user = seed_admin_from_env(get_user_model())
         if user is None:
-            self.stdout.write(
-                "Skipped: INITIAL_ADMIN_USERNAME/INITIAL_ADMIN_PASSWORD not set."
-            )
+            self.stdout.write("Skipped: INITIAL_ADMIN_USERNAME/INITIAL_ADMIN_PASSWORD not set.")
             return
         self.stdout.write(self.style.SUCCESS(f"Ensured admin '{user.username}'."))
