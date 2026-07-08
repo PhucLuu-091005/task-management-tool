@@ -6,11 +6,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import Header from "@/components/Header";
+import StatusMenu from "@/components/StatusMenu";
 import TaskAttachments from "@/components/TaskAttachments";
 import TaskForm from "@/components/TaskForm";
 import TaskLinks from "@/components/TaskLinks";
-import TaskStatusControl from "@/components/TaskStatusControl";
-import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/Modal";
@@ -18,7 +17,50 @@ import { apiErrorMessage } from "@/lib/api";
 import { assigneeLabel, formatDateTime, priorityLabel } from "@/lib/labels";
 import { useProfile, useRequireAuth } from "@/lib/hooks";
 import { useDeleteTask, useTask, useUpdateTask } from "@/lib/tasks";
-import { TaskPayload } from "@/lib/types";
+import { Task, TaskPayload } from "@/lib/types";
+
+function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <dt className="shrink-0 text-muted">{label}</dt>
+      <dd className="text-right font-medium">{children}</dd>
+    </div>
+  );
+}
+
+function InfoCard({ task }: { task: Task }) {
+  return (
+    <Card className="p-6 text-sm">
+      <div className="flex items-center justify-between gap-3 border-b border-line pb-4">
+        <span className="text-muted">Trạng thái</span>
+        <StatusMenu task={task} />
+      </div>
+      <dl className="mt-4 space-y-3">
+        <MetaRow label="Người nhận">{assigneeLabel(task)}</MetaRow>
+        <MetaRow label="Người tạo">{task.created_by_name}</MetaRow>
+        <MetaRow label="Độ ưu tiên">{priorityLabel(task.priority)}</MetaRow>
+        <MetaRow label="Hạn hoàn thành">
+          {formatDateTime(task.due_date)}
+          {task.is_overdue && (
+            <span className="ml-2 rounded-md bg-status-overbg px-1.5 py-0.5 text-xs font-medium text-status-over">
+              Trễ hạn
+            </span>
+          )}
+        </MetaRow>
+        <MetaRow label="Giao lúc">{formatDateTime(task.assigned_at)}</MetaRow>
+        {task.started_at && (
+          <MetaRow label="Bắt đầu">{formatDateTime(task.started_at)}</MetaRow>
+        )}
+        {task.completed_at && (
+          <MetaRow label="Hoàn thành">
+            {formatDateTime(task.completed_at)}
+          </MetaRow>
+        )}
+        <MetaRow label="Ngày tạo">{formatDateTime(task.created_at)}</MetaRow>
+      </dl>
+    </Card>
+  );
+}
 
 export default function TaskDetailPage() {
   const params = useParams<{ id: string }>();
@@ -68,7 +110,7 @@ export default function TaskDetailPage() {
   return (
     <main className="min-h-screen">
       <Header />
-      <div className="mx-auto max-w-2xl space-y-4 px-4 py-6">
+      <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
         <Link
           href="/tasks"
           className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink"
@@ -83,142 +125,87 @@ export default function TaskDetailPage() {
           <Card className="py-12 text-center text-sm text-muted">
             Không tìm thấy công việc.
           </Card>
+        ) : editing ? (
+          <Card className="max-w-2xl p-6">
+            <TaskForm
+              initial={task}
+              submitLabel="Lưu thay đổi"
+              submitting={updateTask.isPending}
+              error={error}
+              onSubmit={handleUpdate}
+            />
+            <button
+              onClick={() => setEditing(false)}
+              className="mt-3 text-sm text-muted underline underline-offset-2 hover:text-ink"
+            >
+              Huỷ
+            </button>
+          </Card>
         ) : (
           <>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h1 className="text-lg font-semibold tracking-tight">
-                  {task.title}
-                </h1>
-                <p className="mt-1 text-sm text-muted">
-                  {assigneeLabel(task)} · Người tạo: {task.created_by_name}
-                </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <h1 className="text-lg font-semibold tracking-tight">
+                {task.title}
+              </h1>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setError(null);
+                    setEditing(true);
+                  }}
+                >
+                  <Pencil className="h-4 w-4" strokeWidth={1.75} />
+                  Chỉnh sửa
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    setDeleteError(null);
+                    setConfirmingDelete(true);
+                  }}
+                  disabled={deleteTask.isPending}
+                >
+                  <Trash2 className="h-4 w-4" strokeWidth={1.75} />
+                  Xoá
+                </Button>
               </div>
-              <StatusBadge status={task.status} />
             </div>
 
-            {editing ? (
-              <Card className="p-6">
-                <TaskForm
-                  initial={task}
-                  submitLabel="Lưu thay đổi"
-                  submitting={updateTask.isPending}
-                  error={error}
-                  onSubmit={handleUpdate}
-                />
-                <button
-                  onClick={() => setEditing(false)}
-                  className="mt-3 text-sm text-muted underline underline-offset-2 hover:text-ink"
-                >
-                  Huỷ
-                </button>
-              </Card>
-            ) : (
-              <>
-                <Card className="p-6 text-sm">
-                  <div className="flex items-center justify-between gap-3 border-b border-line pb-4">
-                    <span className="text-muted">Trạng thái</span>
-                    <TaskStatusControl task={task} />
-                  </div>
-                  <dl className="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2">
-                    <div>
-                      <dt className="text-muted">Độ ưu tiên</dt>
-                      <dd className="mt-1 font-medium">
-                        {priorityLabel(task.priority)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted">Hạn hoàn thành</dt>
-                      <dd className="mt-1 font-medium">
-                        {formatDateTime(task.due_date)}
-                        {task.is_overdue && (
-                          <span className="ml-2 rounded-md bg-status-overbg px-1.5 py-0.5 text-xs font-medium text-status-over">
-                            Trễ hạn
-                          </span>
-                        )}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted">Giao lúc</dt>
-                      <dd className="mt-1 font-medium">
-                        {formatDateTime(task.assigned_at)}
-                      </dd>
-                    </div>
-                    {task.started_at && (
-                      <div>
-                        <dt className="text-muted">Bắt đầu</dt>
-                        <dd className="mt-1 font-medium">
-                          {formatDateTime(task.started_at)}
-                        </dd>
-                      </div>
-                    )}
-                    {task.completed_at && (
-                      <div>
-                        <dt className="text-muted">Hoàn thành</dt>
-                        <dd className="mt-1 font-medium">
-                          {formatDateTime(task.completed_at)}
-                        </dd>
-                      </div>
-                    )}
-                    <div>
-                      <dt className="text-muted">Ngày tạo</dt>
-                      <dd className="mt-1 font-medium">
-                        {formatDateTime(task.created_at)}
-                      </dd>
-                    </div>
-                  </dl>
-                  {task.description && (
-                    <div className="mt-5 border-t border-line pt-4">
-                      <dt className="text-muted">Mô tả</dt>
-                      <p className="mt-1.5 whitespace-pre-wrap">
-                        {task.description}
-                      </p>
-                    </div>
+            {error && <p className="text-sm text-status-over">{error}</p>}
+
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="space-y-4 lg:col-span-2">
+                <Card className="p-6">
+                  <h2 className="text-sm font-semibold tracking-tight">Mô tả</h2>
+                  {task.description ? (
+                    <p className="mt-3 whitespace-pre-wrap text-sm text-ink">
+                      {task.description}
+                    </p>
+                  ) : (
+                    <p className="mt-3 text-sm text-muted">Chưa có mô tả.</p>
                   )}
                 </Card>
-
                 <TaskAttachments taskId={task.id} canManage={canManageItem} />
                 <TaskLinks taskId={task.id} canManage={canManageItem} />
+              </div>
 
-                {error && <p className="text-sm text-status-over">{error}</p>}
+              <aside className="lg:col-span-1">
+                <InfoCard task={task} />
+              </aside>
+            </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      setError(null);
-                      setEditing(true);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" strokeWidth={1.75} />
-                    Chỉnh sửa
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => {
-                      setDeleteError(null);
-                      setConfirmingDelete(true);
-                    }}
-                    disabled={deleteTask.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" strokeWidth={1.75} />
-                    Xoá
-                  </Button>
-                </div>
-
-                <ConfirmDialog
-                  open={confirmingDelete}
-                  title="Xoá công việc"
-                  message={`Xoá công việc "${task.title}"? Hành động này không thể hoàn tác.`}
-                  loading={deleteTask.isPending}
-                  error={deleteError}
-                  onConfirm={handleDelete}
-                  onCancel={() => setConfirmingDelete(false)}
-                />
-              </>
-            )}
+            <ConfirmDialog
+              open={confirmingDelete}
+              title="Xoá công việc"
+              message={`Xoá công việc "${task.title}"? Hành động này không thể hoàn tác.`}
+              loading={deleteTask.isPending}
+              error={deleteError}
+              onConfirm={handleDelete}
+              onCancel={() => setConfirmingDelete(false)}
+            />
           </>
         )}
       </div>
