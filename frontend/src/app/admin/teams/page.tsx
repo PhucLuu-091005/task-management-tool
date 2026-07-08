@@ -13,6 +13,9 @@ import { useDeleteTeam } from "@/lib/admin";
 import { useDepartments, useTeams, useUsers } from "@/lib/org";
 import { Team } from "@/lib/types";
 
+const controlClass =
+  "rounded-ctrl border border-line-strong bg-card px-2.5 py-1.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-4 focus:ring-line";
+
 export default function AdminTeamsPage() {
   const { data: teams, isPending } = useTeams(true);
   const { data: departments } = useDepartments(true);
@@ -24,6 +27,11 @@ export default function AdminTeamsPage() {
   const [membersTeam, setMembersTeam] = useState<Team | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Team | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deptFilter, setDeptFilter] = useState("");
+
+  const shown = (teams ?? []).filter(
+    (t) => !deptFilter || String(t.department) === deptFilter,
+  );
 
   const departmentName = (id: number) =>
     departments?.find((d) => d.id === id)?.name ?? "—";
@@ -52,7 +60,22 @@ export default function AdminTeamsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-medium text-muted">Nhóm</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-sm font-medium text-muted">Nhóm</h2>
+          <select
+            value={deptFilter}
+            onChange={(e) => setDeptFilter(e.target.value)}
+            className={controlClass}
+            aria-label="Lọc theo phòng ban"
+          >
+            <option value="">Mọi phòng ban</option>
+            {departments?.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </div>
         <Button size="sm" onClick={openCreate}>
           <Plus className="h-4 w-4" strokeWidth={2} />
           Tạo nhóm
@@ -65,9 +88,13 @@ export default function AdminTeamsPage() {
         <Card className="py-12 text-center text-sm text-muted">
           Chưa có nhóm nào.
         </Card>
+      ) : shown.length === 0 ? (
+        <Card className="py-12 text-center text-sm text-muted">
+          Không có nhóm phù hợp bộ lọc.
+        </Card>
       ) : (
         <Card className="divide-y divide-line overflow-hidden">
-          {teams.map((team) => (
+          {shown.map((team) => (
             <div
               key={team.id}
               className="flex flex-wrap items-center gap-3 px-4 py-3"
