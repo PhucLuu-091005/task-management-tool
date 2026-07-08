@@ -19,7 +19,7 @@ Repo gồm hai phần: **`frontend/`** (Next.js) và **`backend/`** (Django REST
 ## 2. Kiến trúc tổng quan
 
 <p align="center">
-  <img src="docs/architecture.svg" alt="Kiến trúc hệ thống" width="920">
+  <img src="docs/architecture.png" alt="Kiến trúc hệ thống" width="920">
 </p>
 
 - **Frontend:** Next.js 14 (App Router) + React 18 + TypeScript, UI bằng Tailwind CSS, quản lý server-state bằng **TanStack Query**, gọi API bằng **axios**, biểu đồ **Recharts**.
@@ -43,12 +43,12 @@ Repo gồm hai phần: **`frontend/`** (Next.js) và **`backend/`** (Django REST
 | Tác vụ định kỳ | Management command chạy bằng **supercronic** (không Celery/Redis) |
 | Test | Backend: pytest, pytest-django, pytest-cov, factory-boy, `moto[s3]`. Frontend/E2E: Playwright |
 | Chất lượng code | Ruff (lint + format), pre-commit |
-| DevOps | Docker, Docker Compose, GitHub Actions (lint · test · e2e) |
+| DevOps | Docker, Docker Compose, GitHub Actions (lint · test · e2e), Render (CD tự động khi gán tag) |
 
 ## 4. Mô hình dữ liệu (data model)
 
 <p align="center">
-  <img src="docs/data-model.svg" alt="Mô hình dữ liệu" width="920">
+  <img src="docs/data-model.png" alt="Mô hình dữ liệu" width="920">
 </p>
 
 > **Phạm vi:** ứng dụng phục vụ **một công ty** (single-tenant). "Công ty" là gốc ngầm định, *chưa* tách thành bảng riêng; nếu sau cần nhiều công ty, thêm bảng `Company` đứng trên `Department`. Ba thực thể **Phòng ban, Nhóm, Nhân viên** lồng nhau: `Department 1—∗ Team 1—∗ User` (nhân viên thuộc nhóm qua `TeamMembership`, nhóm thuộc phòng ban).
@@ -153,7 +153,7 @@ Ba vai trò: **`admin`** (cờ `is_admin`, quản trị toàn hệ thống), **`
 ## 6. Trạng thái công việc & tác vụ định kỳ
 
 <p align="center">
-  <img src="docs/task-status.svg" alt="Vòng đời trạng thái công việc" width="880">
+  <img src="docs/task-status.png" alt="Vòng đời trạng thái công việc" width="880">
 </p>
 
 Hai management command chạy theo lịch qua **supercronic** ([`backend/deploy/crontab`](backend/deploy/crontab), múi giờ `Asia/Ho_Chi_Minh`):
@@ -264,7 +264,7 @@ Internal Task Management Project/
 │   │   └── notifications/          # services, templates, send_task_reminders
 │   ├── deploy/crontab              # lịch supercronic
 │   ├── Dockerfile · pyproject.toml · uv.lock · manage.py
-├── docs/                           # sơ đồ (SVG) cho README
+├── docs/                           # sơ đồ (PNG) + CI/CD cho README
 ├── docker-compose.yml
 └── README.md
 ```
@@ -319,6 +319,12 @@ cd frontend && npx playwright test
 ```
 
 **Ruff** lo lint + format backend ([`backend/pyproject.toml`](backend/pyproject.toml): `target-version = py314`, `line-length = 100`, rule `E,F,I,UP,B,DJ`). **CI** (GitHub Actions) chạy ba job: `lint` (ruff) → `test` (pytest + Postgres) → `e2e` (Playwright + backend seed).
+
+<p align="center">
+  <img src="docs/cicd-flow.png" alt="Quy trình CI/CD: Develop → CI (GitHub Actions) → CD (Render)" width="920">
+</p>
+
+**CD (Render)** — sau khi nhánh `master` xanh, gán tag phát hành `v*` (vd `v1.0.0`) rồi push; **Render** phát hiện tag mới và tự **build & deploy** lên production. Bản Render free tier hiện **chưa bật cron**, nên tác vụ định kỳ (`flip_overdue_tasks`, `send_task_reminders`) mới chạy ở local.
 
 Bật hook để bắt lỗi **trước khi commit**:
 
