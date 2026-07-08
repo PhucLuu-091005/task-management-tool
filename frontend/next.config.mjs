@@ -12,7 +12,12 @@ const nextConfig = {
   // 500s the slash-less POST. skipTrailingSlashRedirect keeps page routes untouched.
   skipTrailingSlashRedirect: true,
   async rewrites() {
-    return [{ source: "/api/:path*", destination: `${BACKEND}/api/:path*/` }];
+    return [
+      { source: "/api/:path*", destination: `${BACKEND}/api/:path*/` },
+      // Uploaded media (e.g. avatars) rides the same origin as the app so images
+      // load through the proxy; unlike /api, media paths must keep no trailing slash.
+      { source: "/media/:path*", destination: `${BACKEND}/media/:path*` },
+    ];
   },
 };
 

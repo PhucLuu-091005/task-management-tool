@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -14,6 +14,29 @@ export function useProfile() {
     queryFn: async () => (await api.get("/users/profile/")).data,
     enabled: authed,
     retry: false,
+  });
+}
+
+export function useUpdateAvatar() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const form = new FormData();
+      form.append("avatar", file);
+      return (await api.patch("/users/profile/", form)).data as User;
+    },
+    // The PATCH echoes the full profile, so seed the cache directly instead of
+    // refetching — the header and account page update in one hop.
+    onSuccess: (user) => queryClient.setQueryData(["profile"], user),
+  });
+}
+
+export function useRemoveAvatar() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      (await api.patch("/users/profile/", { avatar: null })).data as User,
+    onSuccess: (user) => queryClient.setQueryData(["profile"], user),
   });
 }
 

@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers, status
 from rest_framework.generics import CreateAPIView, ListAPIView
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -17,7 +18,11 @@ from apps.users.constants import REFRESH_COOKIE_MISSING_ERROR_MESSAGE
 from apps.users.cookies import delete_refresh_cookie, set_refresh_cookie
 from apps.users.managers import MEMBERSHIPS_PREFETCH
 from apps.users.permissions import IsAdmin
-from apps.users.serializers import RegisterSerializer, UserSerializer
+from apps.users.serializers import (
+    AvatarUpdateSerializer,
+    RegisterSerializer,
+    UserSerializer,
+)
 
 User = get_user_model()
 
@@ -43,8 +48,18 @@ class UserListView(ListAPIView):
 class ProfileView(APIView):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
+    # Accept an avatar file (multipart) and a null clear (json) on the same route.
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request, *args, **kwargs):
+        prefetch_related_objects([request.user], MEMBERSHIPS_PREFETCH)
+        return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
+
+    @extend_schema(request=AvatarUpdateSerializer, responses=UserSerializer)
+    def patch(self, request, *args, **kwargs):
+        serializer = AvatarUpdateSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         prefetch_related_objects([request.user], MEMBERSHIPS_PREFETCH)
         return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
 
