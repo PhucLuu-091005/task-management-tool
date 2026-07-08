@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 import { Button } from "@/components/ui/Button";
 
@@ -65,7 +66,10 @@ export function Modal({
 
   if (!open) return null;
 
-  return (
+  // Portal to <body> so the fixed overlay covers the true viewport and paints
+  // above the sticky header — rendered inline, it sat inside the page tree and
+  // left the header (and a strip above it) uncovered.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
@@ -96,7 +100,8 @@ export function Modal({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
