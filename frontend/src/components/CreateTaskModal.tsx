@@ -35,6 +35,7 @@ async function uploadExtras(
     try {
       const form = new FormData();
       form.append("image", img.file);
+      if (img.caption.trim()) form.append("caption", img.caption.trim());
       await api.post(`/tasks/${taskId}/attachments/`, form);
     } catch {
       /* re-addable on the detail page */
@@ -69,11 +70,26 @@ export default function CreateTaskModal({
 
   function handleSubmit(payload: TaskPayload) {
     setError(null);
+    // Skip empty link rows; validate the rest before creating so a bad link
+    // blocks with a clear message instead of being silently dropped on upload.
+    const preparedLinks = links
+      .map((l) => ({ url: l.url.trim(), label: l.label.trim() }))
+      .filter((l) => l.url);
+    const invalid = preparedLinks.find(
+      (l) => !/^https?:\/\//i.test(l.url) || l.url.length > 500,
+    );
+    if (invalid) {
+      setError(
+        "Có liên kết không hợp lệ — phải bắt đầu bằng http:// hoặc https://.",
+      );
+      return;
+    }
+
     createTask.mutate(payload, {
       onSuccess: async (task) => {
-        if (links.length || images.length) {
+        if (preparedLinks.length || images.length) {
           setUploading(true);
-          await uploadExtras(task.id, links, images);
+          await uploadExtras(task.id, preparedLinks, images);
         }
         router.push(`/tasks/${task.id}`);
       },

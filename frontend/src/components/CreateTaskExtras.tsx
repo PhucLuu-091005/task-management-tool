@@ -1,9 +1,8 @@
 "use client";
 
-import { ImagePlus, Link2, Plus, X } from "lucide-react";
+import { ImagePlus, Plus, X } from "lucide-react";
 import { ChangeEvent, KeyboardEvent, useState } from "react";
 
-import { Button } from "@/components/ui/Button";
 import { fieldInput } from "@/components/ui/Field";
 import { ATTACHMENT_ACCEPT, attachmentError } from "@/lib/attachments";
 
@@ -14,10 +13,12 @@ export interface PendingLink {
 
 export interface PendingImage {
   file: File;
+  caption: string;
 }
 
 // Collects links/images to attach right after a task is created (attachments
-// are nested under an existing task, so the modal holds them until then).
+// are nested under an existing task, so the modal holds them until then). Every
+// row is editable in place; the create step validates and skips empty rows.
 export default function CreateTaskExtras({
   links,
   onLinksChange,
@@ -31,36 +32,13 @@ export default function CreateTaskExtras({
   onImagesChange: (images: PendingImage[]) => void;
   disabled?: boolean;
 }) {
-  const [url, setUrl] = useState("");
-  const [label, setLabel] = useState("");
-  const [linkError, setLinkError] = useState<string | null>(null);
   const [imgError, setImgError] = useState<string | null>(null);
 
-  // Mirror the backend TaskLink contract (http/https, <=500 chars) so a bad link
-  // is rejected here rather than queued and silently dropped by the later upload.
-  function addLink() {
-    const trimmed = url.trim();
-    if (!trimmed) return;
-    if (!/^https?:\/\//i.test(trimmed)) {
-      setLinkError("Đường dẫn phải bắt đầu bằng http:// hoặc https://.");
-      return;
-    }
-    if (trimmed.length > 500) {
-      setLinkError("Đường dẫn quá dài (tối đa 500 ký tự).");
-      return;
-    }
-    onLinksChange([...links, { url: trimmed, label: label.trim() }]);
-    setUrl("");
-    setLabel("");
-    setLinkError(null);
+  function updateLink(i: number, patch: Partial<PendingLink>) {
+    onLinksChange(links.map((l, j) => (j === i ? { ...l, ...patch } : l)));
   }
-
-  // Enter inside these sub-inputs would otherwise submit the whole task form.
-  function onSubInputEnter(e: KeyboardEvent) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      addLink();
-    }
+  function updateImage(i: number, caption: string) {
+    onImagesChange(images.map((img, j) => (j === i ? { ...img, caption } : img)));
   }
 
   function pickImages(e: ChangeEvent<HTMLInputElement>) {
@@ -74,8 +52,16 @@ export default function CreateTaskExtras({
       }
     }
     setImgError(null);
-    onImagesChange([...images, ...files.map((file) => ({ file }))]);
+    onImagesChange([...images, ...files.map((file) => ({ file, caption: "" }))]);
   }
+
+  // Enter inside these sub-inputs would otherwise submit the whole task form.
+  function stopEnter(e: KeyboardEvent) {
+    if (e.key === "Enter") e.preventDefault();
+  }
+
+  const iconBtn =
+    "grid h-9 w-9 shrink-0 place-items-center rounded-ctrl text-faint transition-colors hover:text-status-over disabled:opacity-50";
 
   return (
     <div className="space-y-4 border-t border-line pt-4">
@@ -84,90 +70,82 @@ export default function CreateTaskExtras({
           Liên kết (tuỳ chọn)
         </p>
         {links.length > 0 && (
-          <ul className="mb-2 space-y-1.5">
+          <div className="space-y-2">
             {links.map((link, i) => (
-              <li
-                key={i}
-                className="flex items-center gap-2 rounded-ctrl border border-line px-2.5 py-1.5 text-sm"
-              >
-                <Link2 className="h-4 w-4 shrink-0 text-faint" strokeWidth={1.75} />
-                <span className="min-w-0 flex-1 truncate">
-                  {link.label || link.url}
-                </span>
+              <div key={i} className="flex gap-2">
+                <input
+                  type="text"
+                  value={link.url}
+                  onChange={(e) => updateLink(i, { url: e.target.value })}
+                  onKeyDown={stopEnter}
+                  placeholder="https://…"
+                  maxLength={500}
+                  disabled={disabled}
+                  className={`${fieldInput} min-w-0 flex-1`}
+                />
+                <input
+                  value={link.label}
+                  onChange={(e) => updateLink(i, { label: e.target.value })}
+                  onKeyDown={stopEnter}
+                  placeholder="Nhãn"
+                  maxLength={200}
+                  disabled={disabled}
+                  className={`${fieldInput} w-40`}
+                />
                 <button
                   type="button"
                   onClick={() => onLinksChange(links.filter((_, j) => j !== i))}
                   disabled={disabled}
-                  className="text-faint transition-colors hover:text-status-over disabled:opacity-50"
+                  className={iconBtn}
                   aria-label="Xoá liên kết"
                 >
                   <X className="h-4 w-4" strokeWidth={1.75} />
                 </button>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
-        <div className="flex gap-2">
-          <input
-            // Deliberately not type="url": this control lives inside the task
-            // <form>, and native URL validation would block the whole "Tạo công
-            // việc" submit; addLink() validates instead.
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={onSubInputEnter}
-            placeholder="https://…"
-            maxLength={500}
-            disabled={disabled}
-            className={`${fieldInput} min-w-0 flex-1`}
-          />
-          <input
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            onKeyDown={onSubInputEnter}
-            placeholder="Nhãn"
-            maxLength={200}
-            disabled={disabled}
-            className={`${fieldInput} w-24`}
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={addLink}
-            disabled={disabled || !url.trim()}
-            aria-label="Thêm liên kết"
-          >
-            <Plus className="h-4 w-4" strokeWidth={2} />
-          </Button>
-        </div>
-        {linkError && (
-          <p className="mt-1.5 text-sm text-status-over">{linkError}</p>
-        )}
+        <button
+          type="button"
+          onClick={() => onLinksChange([...links, { url: "", label: "" }])}
+          disabled={disabled}
+          className="mt-2 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2} />
+          Thêm liên kết
+        </button>
       </div>
 
       <div>
         <p className="mb-1.5 text-[13px] font-medium text-muted">Ảnh (tuỳ chọn)</p>
         {images.length > 0 && (
-          <ul className="mb-2 flex flex-wrap gap-2">
+          <div className="mb-2 space-y-2">
             {images.map((img, i) => (
-              <li
-                key={i}
-                className="flex items-center gap-1.5 rounded-ctrl border border-line px-2 py-1 text-xs"
-              >
-                <span className="max-w-[9rem] truncate">{img.file.name}</span>
+              <div key={i} className="flex items-center gap-2">
+                <span className="w-28 shrink-0 truncate text-xs text-muted">
+                  {img.file.name}
+                </span>
+                <input
+                  value={img.caption}
+                  onChange={(e) => updateImage(i, e.target.value)}
+                  onKeyDown={stopEnter}
+                  placeholder="Tiêu đề ảnh (tuỳ chọn)"
+                  maxLength={200}
+                  disabled={disabled}
+                  className={`${fieldInput} min-w-0 flex-1`}
+                />
                 <button
                   type="button"
                   onClick={() => onImagesChange(images.filter((_, j) => j !== i))}
                   disabled={disabled}
-                  className="text-faint transition-colors hover:text-status-over disabled:opacity-50"
+                  className={iconBtn}
                   aria-label="Bỏ ảnh"
                 >
-                  <X className="h-3.5 w-3.5" strokeWidth={1.75} />
+                  <X className="h-4 w-4" strokeWidth={1.75} />
                 </button>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-ctrl border border-line-strong bg-card px-3 py-2 text-sm text-ink transition hover:border-ink">
           <ImagePlus className="h-4 w-4 text-muted" strokeWidth={1.75} />
