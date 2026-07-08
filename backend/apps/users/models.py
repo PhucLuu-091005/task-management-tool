@@ -12,6 +12,7 @@ class User(AbstractUser):
         "teams.Team", through="teams.TeamMembership", related_name="members"
     )
     is_admin = models.BooleanField(default=False)
+    avatar = models.ImageField(upload_to="avatars/%Y/%m/", null=True, blank=True)
 
     objects = UserManager()
 
