@@ -7,6 +7,7 @@ from apps.users.views import (
     LogoutView,
     ProfileView,
     RegisterView,
+    UserDetailView,
     UserListView,
 )
 
@@ -18,4 +19,5 @@ urlpatterns = [
     path("token/refresh/", CookieTokenRefreshView.as_view(), name="token_refresh"),
     path("csrf/", CSRFView.as_view(), name="csrf"),
     path("profile/", ProfileView.as_view(), name="profile"),
+    path("<int:pk>/", UserDetailView.as_view(), name="user-detail"),
 ]

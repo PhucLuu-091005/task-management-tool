@@ -6,6 +6,11 @@ USERNAME_CONTENT_ERROR_MESSAGE = (
 
 REFRESH_COOKIE_MISSING_ERROR_MESSAGE = "Authentication credentials were not provided."
 
+CANNOT_DELETE_SELF_ERROR_MESSAGE = "You cannot delete your own account."
+USER_HAS_TASKS_ERROR_MESSAGE = (
+    "Cannot delete this user while they are the creator of one or more tasks."
+)
+
 AVATAR_TOO_LARGE_ERROR_MESSAGE = "Avatar must be 2 MB or smaller."
 AVATAR_INVALID_IMAGE_ERROR_MESSAGE = "Upload a valid image."
 AVATAR_UNSUPPORTED_FORMAT_ERROR_MESSAGE = "Unsupported image format; use JPEG, PNG, GIF, or WEBP."

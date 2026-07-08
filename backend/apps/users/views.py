@@ -1,11 +1,11 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db.models import prefetch_related_objects
+from django.db.models import ProtectedError, prefetch_related_objects
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers, status
-from rest_framework.generics import CreateAPIView, ListAPIView
+from rest_framework.generics import CreateAPIView, DestroyAPIView, ListAPIView
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -14,7 +14,11 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from apps.users.constants import REFRESH_COOKIE_MISSING_ERROR_MESSAGE
+from apps.users.constants import (
+    CANNOT_DELETE_SELF_ERROR_MESSAGE,
+    REFRESH_COOKIE_MISSING_ERROR_MESSAGE,
+    USER_HAS_TASKS_ERROR_MESSAGE,
+)
 from apps.users.cookies import delete_refresh_cookie, set_refresh_cookie
 from apps.users.managers import PROFILE_PREFETCHES
 from apps.users.permissions import IsAdmin
@@ -43,6 +47,30 @@ class UserListView(ListAPIView):
     queryset = User.objects.with_memberships()
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
+
+
+class UserDetailView(DestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAdmin]
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.id == request.user.id:
+            return Response(
+                {"detail": CANNOT_DELETE_SELF_ERROR_MESSAGE},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            instance.delete()
+        except ProtectedError:
+            # Task.created_by is PROTECT, so a creator can't be removed until
+            # their tasks are gone; report it instead of a raw 500.
+            return Response(
+                {"detail": USER_HAS_TASKS_ERROR_MESSAGE},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ProfileView(APIView):
