@@ -55,3 +55,19 @@ def test_cannot_delete_user_who_created_tasks(admin_client, user):
 
     assert res.status_code == 409
     assert User.objects.filter(id=user.id).exists()
+
+
+def test_cannot_delete_user_assigned_to_tasks(admin_client, admin_user, user):
+    # A direct assignee is SET_NULL on delete, which would leave the task in an
+    # invalid "type=user, assignee=null" state — block it instead.
+    Task.objects.create(
+        title="assigned",
+        assignee_type=Task.AssigneeType.USER,
+        assignee_user=user,
+        created_by=admin_user,
+    )
+
+    res = admin_client.delete(_url(user.id))
+
+    assert res.status_code == 409
+    assert User.objects.filter(id=user.id).exists()
