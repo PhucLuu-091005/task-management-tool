@@ -10,6 +10,21 @@ import {
   TeamPayload,
 } from "@/lib/types";
 
+export function useDeleteUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/users/${id}/`);
+      return id;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      // Team member counts are derived from the users list, so refresh teams too.
+      qc.invalidateQueries({ queryKey: ["teams"] });
+    },
+  });
+}
+
 // Team members and per-team member counts are derived client-side from the
 // users list (there is no member-list endpoint), so membership mutations
 // invalidate ["users"], not ["teams"].
