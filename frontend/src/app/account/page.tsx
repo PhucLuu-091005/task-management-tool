@@ -1,13 +1,54 @@
 "use client";
 
+import { ImagePlus } from "lucide-react";
+import { ChangeEvent, useState } from "react";
+
 import Header from "@/components/Header";
+import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
+import { Button, buttonStyles } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { useProfile, useRequireAuth } from "@/lib/hooks";
+import { apiErrorMessage } from "@/lib/api";
+import { AVATAR_ACCEPT, avatarError } from "@/lib/avatar";
+import {
+  useProfile,
+  useRemoveAvatar,
+  useRequireAuth,
+  useUpdateAvatar,
+} from "@/lib/hooks";
 
 export default function AccountPage() {
   const { data: user, isPending, isError, error } = useProfile();
   useRequireAuth(error);
+
+  const updateAvatar = useUpdateAvatar();
+  const removeAvatar = useRemoveAvatar();
+  const [avatarErr, setAvatarErr] = useState<string | null>(null);
+
+  function handlePick(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    // Reset so picking the same file again still fires onChange.
+    e.target.value = "";
+    if (!file) return;
+    const invalid = avatarError(file);
+    if (invalid) {
+      setAvatarErr(invalid);
+      return;
+    }
+    setAvatarErr(null);
+    updateAvatar.mutate(file, {
+      onError: (err) =>
+        setAvatarErr(apiErrorMessage(err, "Không tải được ảnh lên.")),
+    });
+  }
+
+  function handleRemove() {
+    setAvatarErr(null);
+    removeAvatar.mutate(undefined, {
+      onError: (err) =>
+        setAvatarErr(apiErrorMessage(err, "Không xoá được ảnh.")),
+    });
+  }
 
   if (isError) {
     return (
@@ -27,6 +68,8 @@ export default function AccountPage() {
     );
   }
 
+  const uploading = updateAvatar.isPending;
+
   return (
     <main className="min-h-screen">
       <Header />
@@ -38,7 +81,52 @@ export default function AccountPage() {
           <h2 className="text-[13px] font-medium uppercase tracking-wide text-faint">
             Thông tin
           </h2>
-          <dl className="mt-4 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+
+          <div className="mt-4 flex items-center gap-4">
+            <Avatar
+              src={user.avatar}
+              lastName={user.last_name}
+              firstName={user.first_name}
+              className="h-20 w-20"
+              textClassName="text-2xl"
+            />
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <label
+                  className={buttonStyles("secondary", "sm", "cursor-pointer")}
+                  aria-disabled={uploading}
+                >
+                  <ImagePlus className="h-4 w-4 text-muted" strokeWidth={1.75} />
+                  {uploading ? "Đang tải…" : "Đổi ảnh"}
+                  <input
+                    type="file"
+                    accept={AVATAR_ACCEPT}
+                    onChange={handlePick}
+                    disabled={uploading}
+                    className="sr-only"
+                  />
+                </label>
+                {user.avatar && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemove}
+                    disabled={removeAvatar.isPending}
+                  >
+                    Xoá ảnh
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-faint">
+                JPEG, PNG, GIF hoặc WEBP · tối đa 2MB.
+              </p>
+              {avatarErr && (
+                <p className="text-sm text-status-over">{avatarErr}</p>
+              )}
+            </div>
+          </div>
+
+          <dl className="mt-6 grid gap-x-8 gap-y-3 border-t border-line pt-5 text-sm sm:grid-cols-2">
             <div className="flex justify-between sm:block">
               <dt className="text-muted">Họ tên</dt>
               <dd className="mt-0 font-medium sm:mt-1">
