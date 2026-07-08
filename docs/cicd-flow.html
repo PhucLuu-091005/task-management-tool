@@ -107,16 +107,10 @@
           <li class="pill"><span class="p-t">Gán tag phát hành</span><span class="p-s"><code>git tag v1.0.0</code> · push --tags</span></li>
           <li class="pill"><span class="p-t">Render tự deploy</span><span class="p-s">phát hiện tag → build &amp; release</span></li>
           <li class="pill"><span class="p-t">Production trên Render</span><span class="p-s">backend · frontend · Postgres (managed)</span></li>
-          <li class="pill"><span class="p-t">cấu hình prod</span><span class="p-s">Email SMTP · S3 · cookie Secure</span></li>
         </ul>
         <div class="card-foot">không thao tác tay — Render chạy tự động</div>
       </section>
 
     </div>
   </div>
-
-  <footer class="note">
-    <p><b>Ghi chú:</b> <b>CI</b> chạy trên GitHub Actions khi push / mở PR vào <code>master</code> (lint · test · e2e). <b>CD</b> tự động: chỉ cần gán tag phát hành <code>v*</code> (vd <code>v1.0.0</code>) và push, <b>Render</b> phát hiện tag rồi tự build &amp; deploy lên production. Bản Render free tier hiện <b>chưa bật cron</b> — tác vụ định kỳ (flip_overdue_tasks · send_task_reminders) mới chạy ở local.</p>
-    <p class="src">nguồn: .github/workflows/ci.yml · .pre-commit-config.yaml · git tag v1.0.0 · Render dashboard (auto-deploy on tag, không có render.yaml trong repo)</p>
-  </footer>
 </div>
