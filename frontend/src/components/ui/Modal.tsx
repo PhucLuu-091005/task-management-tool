@@ -73,7 +73,10 @@ export function Modal({
       aria-label={title}
     >
       <div
-        className="absolute inset-0 bg-ink/30 backdrop-blur-sm"
+        // No backdrop-blur: it would overlap the sticky header's own
+        // backdrop-filter, which Chromium composites as a black bar. A solid
+        // scrim dims the page just as well without the artifact.
+        className="absolute inset-0 bg-ink/45"
         onClick={onClose}
       />
       <div

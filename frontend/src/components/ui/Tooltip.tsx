@@ -17,7 +17,10 @@ export function Tooltip({
       {children}
       <span
         role="tooltip"
-        className="pointer-events-none absolute left-1/2 top-full z-50 mt-1.5 max-w-[16rem] -translate-x-1/2 rounded-md bg-ink px-2 py-1 text-center text-xs font-medium text-white opacity-0 shadow-soft transition-opacity duration-100 group-hover/tt:opacity-100 group-focus-within/tt:opacity-100"
+        // Right-anchored + w-max: an absolute child's auto width would shrink to
+        // the (button-sized) wrapper and wrap one word per line, so size it to its
+        // content and cap it, extending leftward from a right-aligned trigger.
+        className="pointer-events-none absolute right-0 top-full z-50 mt-1.5 w-max max-w-[15rem] rounded-md bg-ink px-2.5 py-1.5 text-xs font-medium leading-snug text-white opacity-0 shadow-soft transition-opacity duration-100 group-hover/tt:opacity-100 group-focus-within/tt:opacity-100"
       >
         {label}
       </span>
