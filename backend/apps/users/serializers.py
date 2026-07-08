@@ -19,6 +19,7 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     memberships = TeamMembershipSerializer(many=True, read_only=True)
     avatar = serializers.SerializerMethodField()
+    can_create_tasks = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = User
@@ -30,6 +31,7 @@ class UserSerializer(serializers.ModelSerializer):
             "last_name",
             "is_admin",
             "avatar",
+            "can_create_tasks",
             "memberships",
         ]
         read_only_fields = ["is_admin"]

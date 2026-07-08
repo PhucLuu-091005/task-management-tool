@@ -62,13 +62,6 @@ def _leads_department(user, department_id):
     return bool(department_id) and Department.objects.filter(id=department_id, lead=user).exists()
 
 
-def _is_any_leader(user):
-    return (
-        TeamMembership.objects.filter(user=user, role=TeamMembership.Role.LEADER).exists()
-        or Department.objects.filter(lead=user).exists()
-    )
-
-
 def can_manage_assignee(
     user, *, assignee_type, assignee_user_id, assignee_team_id, assignee_department_id
 ):
@@ -93,7 +86,7 @@ class CanCreateTask(BasePermission):
             return False
         if request.method in SAFE_METHODS:
             return True
-        return getattr(user, "is_admin", False) or _is_any_leader(user)
+        return bool(getattr(user, "can_create_tasks", False))
 
 
 class CanEditTask(BasePermission):

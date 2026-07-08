@@ -131,6 +131,7 @@ def test_user_serializer_output_hides_password(user):
         "last_name",
         "is_admin",
         "avatar",
+        "can_create_tasks",
         "memberships",
     }
 
