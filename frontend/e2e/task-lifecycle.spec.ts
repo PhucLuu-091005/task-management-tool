@@ -16,12 +16,19 @@ test("create a task and move it through its status lifecycle", async ({ page }) 
   await expect(page).toHaveURL(/\/tasks$/);
   await expect(page.getByRole("link", { name: title })).toBeVisible();
 
-  const statusSelect = page.getByRole("combobox", { name: `Trạng thái: ${title}` });
-  await expect(statusSelect).toHaveValue("new");
+  // The list status control is a pill that opens its allowed transitions.
+  const row = page.getByRole("link", { name: title }).locator("../..");
+  const status = row.getByRole("button", { name: "Đổi trạng thái" });
+  await expect(status).toContainText("Mới");
 
-  await statusSelect.selectOption("in_progress");
-  await expect(statusSelect).toHaveValue("in_progress");
+  await status.click();
+  await page.getByRole("menuitem", { name: "Đang xử lý" }).click();
+  await expect(status).toContainText("Đang xử lý");
 
-  await statusSelect.selectOption("done");
-  await expect(statusSelect).toHaveValue("done");
+  await status.click();
+  await page.getByRole("menuitem", { name: "Hoàn thành" }).click();
+
+  // A terminal status renders as a plain badge — the menu button is gone.
+  await expect(row.getByRole("button", { name: "Đổi trạng thái" })).toHaveCount(0);
+  await expect(row.getByText("Hoàn thành")).toBeVisible();
 });

@@ -13,6 +13,9 @@ import {
 import { useUpdateTaskStatus } from "@/lib/tasks";
 import { Task, TaskStatus } from "@/lib/types";
 
+const pill =
+  "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition";
+
 // A single status control: the colored status pill IS the trigger. Clicking it
 // opens the allowed transitions; a terminal status (no transitions) renders as a
 // plain, non-interactive badge. Replaces the old badge + separate dropdown.
@@ -56,17 +59,22 @@ export default function StatusMenu({
     );
   }
 
-  const pill =
-    "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition";
+  if (locked) {
+    return (
+      <span className={cn(pill, STATUS_BADGE_CLASSES[task.status])}>
+        {STATUS_LABELS[task.status]}
+      </span>
+    );
+  }
 
   return (
     <div ref={ref} className="relative flex flex-col items-end gap-1">
       <button
         type="button"
-        disabled={locked || updateStatus.isPending}
-        aria-haspopup={locked ? undefined : "menu"}
-        aria-expanded={locked ? undefined : open}
-        aria-label={locked ? undefined : "Đổi trạng thái"}
+        disabled={updateStatus.isPending}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Đổi trạng thái"
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
@@ -75,15 +83,15 @@ export default function StatusMenu({
         className={cn(
           pill,
           STATUS_BADGE_CLASSES[task.status],
-          locked ? "cursor-default" : "cursor-pointer hover:brightness-95",
+          "cursor-pointer hover:brightness-95",
           updateStatus.isPending && "opacity-70",
         )}
       >
         {STATUS_LABELS[task.status]}
-        {!locked && <ChevronDown className="h-3 w-3 opacity-70" strokeWidth={2.5} />}
+        <ChevronDown className="h-3 w-3 opacity-70" strokeWidth={2.5} />
       </button>
 
-      {open && !locked && (
+      {open && (
         <div
           role="menu"
           className={cn(

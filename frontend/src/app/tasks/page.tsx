@@ -2,7 +2,7 @@
 
 import { Plus, Search, X } from "lucide-react";
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import CreateTaskModal from "@/components/CreateTaskModal";
 import Header from "@/components/Header";
@@ -40,7 +40,10 @@ export default function TasksPage() {
   useRequireAuth();
   const { data: profile } = useProfile();
   const isAdmin = !!profile?.is_admin;
-  const canCreate = !!profile?.can_create_tasks;
+  // Only *deny* once the profile has loaded and says so; while it's loading keep
+  // the button active (the backend still enforces) so an admin/leader sees no
+  // flash of a disabled control.
+  const denyCreate = !!profile && !profile.can_create_tasks;
   const { data: users } = useUsers(isAdmin && assigneeType === "user");
   const { data: teams } = useTeams(isAdmin && assigneeType === "team");
   const { data: departments } = useDepartments(
@@ -84,22 +87,19 @@ export default function TasksPage() {
 
   const totalPages = data ? Math.ceil(data.count / TASKS_PAGE_SIZE) : 0;
 
+  // If a filter or status change shrinks the results below the current page, step
+  // back so we never request an out-of-range page (which 404s → the error card).
+  useEffect(() => {
+    if (data && page > 1 && page > totalPages) setPage(Math.max(totalPages, 1));
+  }, [data, page, totalPages]);
+
   return (
     <main className="min-h-screen">
       <Header />
       <div className="mx-auto max-w-5xl space-y-5 px-4 py-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-lg font-semibold tracking-tight">Công việc</h1>
-          {canCreate ? (
-            <button
-              type="button"
-              onClick={() => setCreating(true)}
-              className={buttonStyles("primary", "md")}
-            >
-              <Plus className="h-4 w-4" strokeWidth={2} />
-              Tạo công việc
-            </button>
-          ) : (
+          {denyCreate ? (
             <Tooltip label="Chỉ admin, trưởng nhóm hoặc trưởng phòng mới được tạo công việc.">
               <button
                 type="button"
@@ -110,6 +110,15 @@ export default function TasksPage() {
                 Tạo công việc
               </button>
             </Tooltip>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className={buttonStyles("primary", "md")}
+            >
+              <Plus className="h-4 w-4" strokeWidth={2} />
+              Tạo công việc
+            </button>
           )}
         </div>
 
@@ -284,7 +293,7 @@ export default function TasksPage() {
           </div>
         )}
 
-        {canCreate && (
+        {!denyCreate && (
           <CreateTaskModal open={creating} onClose={() => setCreating(false)} />
         )}
       </div>
