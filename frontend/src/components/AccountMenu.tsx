@@ -56,6 +56,7 @@ export default function AccountMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label="Menu tài khoản"
         className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-1.5 transition-colors hover:bg-line/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:pr-2.5"
       >
         <Avatar

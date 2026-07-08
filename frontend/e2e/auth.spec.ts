@@ -6,7 +6,8 @@ test("register, sign out, and sign back in", async ({ page }) => {
   const user = await register(page);
   await expect(page.getByRole("heading", { name: "Công việc" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Đăng xuất" }).click();
+  await page.getByRole("button", { name: "Menu tài khoản" }).click();
+  await page.getByRole("menuitem", { name: "Đăng xuất" }).click();
   await expect(page).toHaveURL(/\/login$/);
 
   await login(page, user);
