@@ -1,7 +1,7 @@
 "use client";
 
 import { ImagePlus, Link2, Plus, X } from "lucide-react";
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, KeyboardEvent, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { fieldInput } from "@/components/ui/Field";
@@ -33,14 +33,34 @@ export default function CreateTaskExtras({
 }) {
   const [url, setUrl] = useState("");
   const [label, setLabel] = useState("");
+  const [linkError, setLinkError] = useState<string | null>(null);
   const [imgError, setImgError] = useState<string | null>(null);
 
+  // Mirror the backend TaskLink contract (http/https, <=500 chars) so a bad link
+  // is rejected here rather than queued and silently dropped by the later upload.
   function addLink() {
     const trimmed = url.trim();
     if (!trimmed) return;
+    if (!/^https?:\/\//i.test(trimmed)) {
+      setLinkError("Đường dẫn phải bắt đầu bằng http:// hoặc https://.");
+      return;
+    }
+    if (trimmed.length > 500) {
+      setLinkError("Đường dẫn quá dài (tối đa 500 ký tự).");
+      return;
+    }
     onLinksChange([...links, { url: trimmed, label: label.trim() }]);
     setUrl("");
     setLabel("");
+    setLinkError(null);
+  }
+
+  // Enter inside these sub-inputs would otherwise submit the whole task form.
+  function onSubInputEnter(e: KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addLink();
+    }
   }
 
   function pickImages(e: ChangeEvent<HTMLInputElement>) {
@@ -77,7 +97,8 @@ export default function CreateTaskExtras({
                 <button
                   type="button"
                   onClick={() => onLinksChange(links.filter((_, j) => j !== i))}
-                  className="text-faint transition-colors hover:text-status-over"
+                  disabled={disabled}
+                  className="text-faint transition-colors hover:text-status-over disabled:opacity-50"
                   aria-label="Xoá liên kết"
                 >
                   <X className="h-4 w-4" strokeWidth={1.75} />
@@ -88,22 +109,22 @@ export default function CreateTaskExtras({
         )}
         <div className="flex gap-2">
           <input
-            type="url"
+            // Deliberately not type="url": this control lives inside the task
+            // <form>, and native URL validation would block the whole "Tạo công
+            // việc" submit; addLink() validates instead.
+            type="text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addLink();
-              }
-            }}
+            onKeyDown={onSubInputEnter}
             placeholder="https://…"
+            maxLength={500}
             disabled={disabled}
             className={`${fieldInput} min-w-0 flex-1`}
           />
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
+            onKeyDown={onSubInputEnter}
             placeholder="Nhãn"
             maxLength={200}
             disabled={disabled}
@@ -120,6 +141,9 @@ export default function CreateTaskExtras({
             <Plus className="h-4 w-4" strokeWidth={2} />
           </Button>
         </div>
+        {linkError && (
+          <p className="mt-1.5 text-sm text-status-over">{linkError}</p>
+        )}
       </div>
 
       <div>
@@ -135,7 +159,8 @@ export default function CreateTaskExtras({
                 <button
                   type="button"
                   onClick={() => onImagesChange(images.filter((_, j) => j !== i))}
-                  className="text-faint transition-colors hover:text-status-over"
+                  disabled={disabled}
+                  className="text-faint transition-colors hover:text-status-over disabled:opacity-50"
                   aria-label="Bỏ ảnh"
                 >
                   <X className="h-3.5 w-3.5" strokeWidth={1.75} />
