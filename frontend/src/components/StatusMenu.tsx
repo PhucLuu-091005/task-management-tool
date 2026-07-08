@@ -3,6 +3,7 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { ConfirmDialog } from "@/components/ui/Modal";
 import { apiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import {
@@ -18,7 +19,8 @@ const pill =
 
 // A single status control: the colored status pill IS the trigger. Clicking it
 // opens the allowed transitions; a terminal status (no transitions) renders as a
-// plain, non-interactive badge. Replaces the old badge + separate dropdown.
+// plain, non-interactive badge. The lifecycle is one-way, so a picked transition
+// is confirmed before it's applied — a misclick shouldn't be unrecoverable.
 export default function StatusMenu({
   task,
   align = "end",
@@ -28,6 +30,7 @@ export default function StatusMenu({
 }) {
   const updateStatus = useUpdateTaskStatus();
   const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState<TaskStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -50,12 +53,21 @@ export default function StatusMenu({
     };
   }, [open]);
 
-  function choose(status: TaskStatus) {
+  function pick(status: TaskStatus) {
     setOpen(false);
     setError(null);
+    setPending(status);
+  }
+
+  function confirmChange() {
+    if (!pending) return;
     updateStatus.mutate(
-      { id: task.id, status },
-      { onError: (err) => setError(apiErrorMessage(err, "Không đổi được trạng thái.")) },
+      { id: task.id, status: pending },
+      {
+        onSuccess: () => setPending(null),
+        onError: (err) =>
+          setError(apiErrorMessage(err, "Không đổi được trạng thái.")),
+      },
     );
   }
 
@@ -106,7 +118,7 @@ export default function StatusMenu({
               role="menuitem"
               onClick={(e) => {
                 e.stopPropagation();
-                choose(s);
+                pick(s);
               }}
               className="flex w-full items-center px-3 py-1.5 text-left text-sm text-ink transition-colors hover:bg-line/60"
             >
@@ -116,11 +128,19 @@ export default function StatusMenu({
         </div>
       )}
 
-      {error && (
-        <span className="max-w-[12rem] text-right text-xs text-status-over">
-          {error}
-        </span>
-      )}
+      <ConfirmDialog
+        open={pending !== null}
+        title="Đổi trạng thái"
+        message={`Chuyển trạng thái từ "${STATUS_LABELS[task.status]}" sang "${pending ? STATUS_LABELS[pending] : ""}"? Trạng thái không thể hoàn tác.`}
+        confirmLabel="Chuyển"
+        loading={updateStatus.isPending}
+        error={error}
+        onConfirm={confirmChange}
+        onCancel={() => {
+          setPending(null);
+          setError(null);
+        }}
+      />
     </div>
   );
 }

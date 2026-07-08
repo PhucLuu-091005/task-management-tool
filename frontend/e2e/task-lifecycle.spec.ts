@@ -23,10 +23,13 @@ test("create a task and move it through its status lifecycle", async ({ page }) 
 
   await status.click();
   await page.getByRole("menuitem", { name: "Đang xử lý" }).click();
+  // The one-way transition is confirmed before it applies.
+  await page.getByRole("button", { name: "Chuyển" }).click();
   await expect(status).toContainText("Đang xử lý");
 
   await status.click();
   await page.getByRole("menuitem", { name: "Hoàn thành" }).click();
+  await page.getByRole("button", { name: "Chuyển" }).click();
 
   // A terminal status renders as a plain badge — the menu button is gone.
   await expect(row.getByRole("button", { name: "Đổi trạng thái" })).toHaveCount(0);
