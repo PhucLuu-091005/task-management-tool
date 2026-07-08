@@ -101,6 +101,9 @@ def test_upload_rejects_oversized_dimensions(auth_client, profile_url, monkeypat
 
 def test_remove_avatar_clears_it(auth_client, profile_url, user):
     auth_client.patch(profile_url, {"avatar": _image_upload()}, format="multipart")
+    user.refresh_from_db()
+    old_path = user.avatar.path
+    assert os.path.exists(old_path)
 
     res = auth_client.patch(profile_url, {"avatar": None}, format="json")
 
@@ -108,6 +111,8 @@ def test_remove_avatar_clears_it(auth_client, profile_url, user):
     assert res.data["avatar"] is None
     user.refresh_from_db()
     assert not user.avatar
+    # Clearing must also drop the stored file, not just the DB reference.
+    assert not os.path.exists(old_path)
 
 
 def test_replacing_avatar_deletes_old_file(auth_client, profile_url, user):

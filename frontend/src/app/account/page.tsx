@@ -69,6 +69,9 @@ export default function AccountPage() {
   }
 
   const uploading = updateAvatar.isPending;
+  // Upload and remove hit the same route; only one write may be in flight at a
+  // time, or a late-resolving PATCH could desync the cache/DB and orphan a file.
+  const busy = uploading || removeAvatar.isPending;
 
   return (
     <main className="min-h-screen">
@@ -93,8 +96,12 @@ export default function AccountPage() {
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <label
-                  className={buttonStyles("secondary", "sm", "cursor-pointer")}
-                  aria-disabled={uploading}
+                  className={buttonStyles(
+                    "secondary",
+                    "sm",
+                    "cursor-pointer focus-within:ring-2 focus-within:ring-ink focus-within:ring-offset-2 focus-within:ring-offset-background",
+                  )}
+                  aria-disabled={busy}
                 >
                   <ImagePlus className="h-4 w-4 text-muted" strokeWidth={1.75} />
                   {uploading ? "Đang tải…" : "Đổi ảnh"}
@@ -102,7 +109,7 @@ export default function AccountPage() {
                     type="file"
                     accept={AVATAR_ACCEPT}
                     onChange={handlePick}
-                    disabled={uploading}
+                    disabled={busy}
                     className="sr-only"
                   />
                 </label>
@@ -111,7 +118,7 @@ export default function AccountPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleRemove}
-                    disabled={removeAvatar.isPending}
+                    disabled={busy}
                   >
                     Xoá ảnh
                   </Button>
