@@ -230,3 +230,14 @@ def test_cannot_delete_department_with_assigned_tasks(admin_client, admin_user, 
 
     assert res.status_code == 409
     assert Department.objects.filter(id=department.id).exists()
+
+
+def test_cannot_delete_department_with_teams(admin_client, department):
+    # Team.department is PROTECT, so deleting a department that still owns teams
+    # must fail cleanly (409), not raise a raw ProtectedError (500).
+    Team.objects.create(name="Owned", department=department)
+
+    res = admin_client.delete(reverse("department-detail", args=[department.id]))
+
+    assert res.status_code == 409
+    assert Department.objects.filter(id=department.id).exists()

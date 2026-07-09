@@ -1,6 +1,7 @@
 from functools import cached_property
 
 from django.db import transaction
+from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -8,6 +9,7 @@ from rest_framework.response import Response
 from apps.tasks.models import Task
 from apps.teams.constants import (
     DEPARTMENT_ASSIGNED_TASKS_ERROR_MESSAGE,
+    DEPARTMENT_HAS_TEAMS_ERROR_MESSAGE,
     TEAM_ASSIGNED_TASKS_ERROR_MESSAGE,
 )
 from apps.teams.models import Department, Team, TeamMembership
@@ -98,4 +100,12 @@ class DepartmentDetailView(generics.RetrieveUpdateDestroyAPIView):
                 {"detail": DEPARTMENT_ASSIGNED_TASKS_ERROR_MESSAGE},
                 status=status.HTTP_409_CONFLICT,
             )
-        return super().destroy(request, *args, **kwargs)
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            # Team.department is PROTECT, so a department that still owns teams
+            # can't be removed; report it cleanly instead of a raw 500.
+            return Response(
+                {"detail": DEPARTMENT_HAS_TEAMS_ERROR_MESSAGE},
+                status=status.HTTP_409_CONFLICT,
+            )
