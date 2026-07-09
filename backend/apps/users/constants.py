@@ -7,7 +7,7 @@ USERNAME_CONTENT_ERROR_MESSAGE = (
 REFRESH_COOKIE_MISSING_ERROR_MESSAGE = "Authentication credentials were not provided."
 
 CANNOT_DELETE_SELF_ERROR_MESSAGE = "You cannot delete your own account."
-LAST_ADMIN_ERROR_MESSAGE = "Cannot delete the last remaining admin."
+CANNOT_DELETE_ADMIN_ERROR_MESSAGE = "Cannot delete an admin account."
 USER_HAS_TASKS_ERROR_MESSAGE = (
     "Cannot delete this user while they are the creator of one or more tasks."
 )

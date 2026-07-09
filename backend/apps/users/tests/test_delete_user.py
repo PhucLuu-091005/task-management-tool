@@ -40,6 +40,22 @@ def test_admin_cannot_delete_self(admin_client, admin_user):
     assert User.objects.filter(id=admin_user.id).exists()
 
 
+def test_admin_cannot_delete_another_admin(admin_client):
+    other_admin = User.objects.create_user(
+        email="admin2@example.com",
+        username="adminy",
+        password="Str0ng!Passw0rd",
+        first_name="Ad2",
+        last_name="Min2",
+        is_admin=True,
+    )
+
+    res = admin_client.delete(_url(other_admin.id))
+
+    assert res.status_code == 403
+    assert User.objects.filter(id=other_admin.id).exists()
+
+
 def test_cannot_delete_user_who_created_tasks(admin_client, user):
     # Task.created_by is PROTECT, so deleting the creator must fail cleanly.
     dept = Department.objects.create(name="Dept Del")
