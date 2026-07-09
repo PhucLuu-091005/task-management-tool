@@ -26,7 +26,7 @@ test("admin manages departments, teams, and members", async ({ page }) => {
   await dialog.getByRole("button", { name: "Tạo" }).click();
 
   // Row is scoped by the unique token so leftover data can't interfere.
-  const row = page.locator("div.flex-wrap").filter({ hasText: token });
+  const row = page.locator(".divide-y > div").filter({ hasText: token });
   await expect(row).toBeVisible();
   // The creating admin is auto-added as a leader → one member.
   await expect(page.getByText(`${deptName} · 1 thành viên`)).toBeVisible();
@@ -50,17 +50,17 @@ test("admin manages departments, teams, and members", async ({ page }) => {
   // --- Delete the team ---
   await row.getByRole("button", { name: "Xoá" }).click();
   await dialog.getByRole("button", { name: "Xoá" }).click();
-  await expect(page.locator("div.flex-wrap").filter({ hasText: token })).toHaveCount(
+  await expect(page.locator(".divide-y > div").filter({ hasText: token })).toHaveCount(
     0,
   );
 
   // --- Delete the (now empty) department ---
   await page.goto("/admin/departments");
-  const deptRow = page.locator("div.flex-wrap").filter({ hasText: token });
+  const deptRow = page.locator(".divide-y > div").filter({ hasText: token });
   await deptRow.getByRole("button", { name: "Xoá" }).click();
   await dialog.getByRole("button", { name: "Xoá" }).click();
   await expect(
-    page.locator("div.flex-wrap").filter({ hasText: token }),
+    page.locator(".divide-y > div").filter({ hasText: token }),
   ).toHaveCount(0);
 });
 
