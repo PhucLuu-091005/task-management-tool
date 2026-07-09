@@ -14,6 +14,7 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from apps.tasks.models import Task
 from apps.users.constants import (
     CANNOT_DELETE_ADMIN_ERROR_MESSAGE,
     CANNOT_DELETE_SELF_ERROR_MESSAGE,
@@ -57,8 +58,6 @@ class UserDetailView(DestroyAPIView):
     permission_classes = [IsAdmin]
 
     def destroy(self, request, *args, **kwargs):
-        from apps.tasks.models import Task
-
         instance = self.get_object()
         if instance.id == request.user.id:
             return Response(

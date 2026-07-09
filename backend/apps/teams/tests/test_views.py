@@ -1,6 +1,7 @@
 import pytest
 from django.urls import reverse
 
+from apps.tasks.models import Task
 from apps.teams.models import Department, Team, TeamMembership
 
 pytestmark = pytest.mark.django_db
@@ -76,8 +77,6 @@ def test_member_cannot_delete_team(member_client, team):
 
 
 def test_cannot_delete_team_with_assigned_tasks(admin_client, admin_user, team):
-    from apps.tasks.models import Task
-
     # assignee_team is SET_NULL, so deleting a team with assigned tasks would leave
     # them in an invalid "type=team, assignee=null" state — block it instead.
     Task.objects.create(
@@ -220,8 +219,6 @@ def test_admin_deletes_department(admin_client, department):
 
 
 def test_cannot_delete_department_with_assigned_tasks(admin_client, admin_user, department):
-    from apps.tasks.models import Task
-
     Task.objects.create(
         title="assigned",
         assignee_type=Task.AssigneeType.DEPARTMENT,

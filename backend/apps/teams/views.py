@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
 
+from apps.tasks.models import Task
 from apps.teams.constants import (
     DEPARTMENT_ASSIGNED_TASKS_ERROR_MESSAGE,
     TEAM_ASSIGNED_TASKS_ERROR_MESSAGE,
@@ -38,8 +39,6 @@ class TeamDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAdmin]
 
     def destroy(self, request, *args, **kwargs):
-        from apps.tasks.models import Task
-
         instance = self.get_object()
         # assignee_team is SET_NULL, so deleting a team with tasks assigned to it
         # would leave them in an invalid "type=team, assignee=null" state; block it.
@@ -90,8 +89,6 @@ class DepartmentDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAdmin]
 
     def destroy(self, request, *args, **kwargs):
-        from apps.tasks.models import Task
-
         instance = self.get_object()
         # assignee_department is SET_NULL, so deleting a department with tasks
         # assigned to it would leave them in an invalid "type=department,
