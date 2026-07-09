@@ -16,7 +16,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.users.constants import REFRESH_COOKIE_MISSING_ERROR_MESSAGE
 from apps.users.cookies import delete_refresh_cookie, set_refresh_cookie
-from apps.users.managers import MEMBERSHIPS_PREFETCH
+from apps.users.managers import PROFILE_PREFETCHES
 from apps.users.permissions import IsAdmin
 from apps.users.serializers import (
     AvatarUpdateSerializer,
@@ -35,7 +35,7 @@ class RegisterView(CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        prefetch_related_objects([user], MEMBERSHIPS_PREFETCH)
+        prefetch_related_objects([user], *PROFILE_PREFETCHES)
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
@@ -52,7 +52,7 @@ class ProfileView(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request, *args, **kwargs):
-        prefetch_related_objects([request.user], MEMBERSHIPS_PREFETCH)
+        prefetch_related_objects([request.user], *PROFILE_PREFETCHES)
         return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
 
     @extend_schema(request=AvatarUpdateSerializer, responses=UserSerializer)
@@ -60,7 +60,7 @@ class ProfileView(APIView):
         serializer = AvatarUpdateSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        prefetch_related_objects([request.user], MEMBERSHIPS_PREFETCH)
+        prefetch_related_objects([request.user], *PROFILE_PREFETCHES)
         return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
 
 

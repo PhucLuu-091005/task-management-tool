@@ -63,7 +63,7 @@ def test_profile_avoids_n_plus_1_for_memberships(
         TeamMembership.objects.create(user=user, team=team, role=TeamMembership.Role.MEMBER)
 
     # Query count must stay flat regardless of how many memberships the user has.
-    with django_assert_max_num_queries(4):
+    with django_assert_max_num_queries(5):
         res = auth_client.get(profile_url)
 
     assert res.status_code == 200
@@ -137,7 +137,7 @@ def test_admin_lists_users_with_memberships(
         team = Team.objects.create(name=f"T{i}", department=dept)
         TeamMembership.objects.create(user=user, team=team, role=TeamMembership.Role.MEMBER)
 
-    with django_assert_max_num_queries(5):
+    with django_assert_max_num_queries(6):
         res = admin_client.get(user_list_url)
 
     assert res.status_code == 200

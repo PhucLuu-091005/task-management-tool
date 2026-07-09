@@ -9,6 +9,10 @@ import { isAxiosError } from "axios";
 import { api } from "@/lib/api";
 import { Paginated, Task, TaskPayload, TaskStatus } from "@/lib/types";
 
+// Mirrors TaskPagination.page_size in apps/tasks/views.py; used to derive the
+// numbered pager's total page count from the result `count`.
+export const TASKS_PAGE_SIZE = 20;
+
 export interface TaskListParams {
   page: number;
   search: string;

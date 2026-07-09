@@ -11,10 +11,14 @@ MEMBERSHIPS_PREFETCH = Prefetch(
     "memberships", queryset=TeamMembership.objects.select_related("team")
 )
 
+# Everything UserSerializer touches: memberships (roles) plus led_departments, so
+# `can_create_tasks` resolves without a per-user query on the profile / user list.
+PROFILE_PREFETCHES = (MEMBERSHIPS_PREFETCH, "led_departments")
+
 
 class UserQuerySet(models.QuerySet):
     def with_memberships(self):
-        return self.prefetch_related(MEMBERSHIPS_PREFETCH)
+        return self.prefetch_related(*PROFILE_PREFETCHES)
 
 
 # Inherit from DjangoUserManager to keep create_user/create_superuser, and use

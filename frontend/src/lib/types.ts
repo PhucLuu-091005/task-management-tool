@@ -14,6 +14,7 @@ export interface User {
   last_name: string;
   is_admin: boolean;
   avatar: string | null;
+  can_create_tasks: boolean;
   memberships: TeamMembership[];
 }
 
