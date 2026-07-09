@@ -3,11 +3,45 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import CreateTaskExtras, {
+  PendingImage,
+  PendingLink,
+} from "@/components/CreateTaskExtras";
 import TaskForm from "@/components/TaskForm";
 import { Modal } from "@/components/ui/Modal";
-import { apiErrorMessage } from "@/lib/api";
+import { api, apiErrorMessage } from "@/lib/api";
 import { useCreateTask } from "@/lib/tasks";
 import { TaskPayload } from "@/lib/types";
+
+// Best-effort: the task already exists, so attach each independently and let the
+// detail page (source of truth) show the result — any item that fails to upload
+// can be re-added there rather than blocking the create flow.
+async function uploadExtras(
+  taskId: number,
+  links: PendingLink[],
+  images: PendingImage[],
+) {
+  for (const link of links) {
+    try {
+      await api.post(`/tasks/${taskId}/links/`, {
+        url: link.url,
+        label: link.label,
+      });
+    } catch {
+      /* re-addable on the detail page */
+    }
+  }
+  for (const img of images) {
+    try {
+      const form = new FormData();
+      form.append("image", img.file);
+      if (img.caption.trim()) form.append("caption", img.caption.trim());
+      await api.post(`/tasks/${taskId}/attachments/`, form);
+    } catch {
+      /* re-addable on the detail page */
+    }
+  }
+}
 
 export default function CreateTaskModal({
   open,
@@ -19,17 +53,46 @@ export default function CreateTaskModal({
   const router = useRouter();
   const createTask = useCreateTask();
   const [error, setError] = useState<string | null>(null);
+  const [links, setLinks] = useState<PendingLink[]>([]);
+  const [images, setImages] = useState<PendingImage[]>([]);
+  const [uploading, setUploading] = useState(false);
 
-  // TaskForm remounts (fields reset) each open, but this error lives on the
-  // always-mounted modal, so clear it so a prior failure doesn't linger.
+  // TaskForm remounts (fields reset) each open, but this state lives on the
+  // always-mounted modal, so clear it so a prior attempt doesn't linger.
   useEffect(() => {
-    if (open) setError(null);
+    if (open) {
+      setError(null);
+      setLinks([]);
+      setImages([]);
+      setUploading(false);
+    }
   }, [open]);
 
   function handleSubmit(payload: TaskPayload) {
     setError(null);
+    // Skip empty link rows; validate the rest before creating so a bad link
+    // blocks with a clear message instead of being silently dropped on upload.
+    const preparedLinks = links
+      .map((l) => ({ url: l.url.trim(), label: l.label.trim() }))
+      .filter((l) => l.url);
+    const invalid = preparedLinks.find(
+      (l) => !/^https?:\/\//i.test(l.url) || l.url.length > 500,
+    );
+    if (invalid) {
+      setError(
+        "Có liên kết không hợp lệ — phải bắt đầu bằng http:// hoặc https://.",
+      );
+      return;
+    }
+
     createTask.mutate(payload, {
-      onSuccess: (task) => router.push(`/tasks/${task.id}`),
+      onSuccess: async (task) => {
+        if (preparedLinks.length || images.length) {
+          setUploading(true);
+          await uploadExtras(task.id, preparedLinks, images);
+        }
+        router.push(`/tasks/${task.id}`);
+      },
       onError: (err) =>
         setError(
           apiErrorMessage(err, "Không tạo được công việc. Vui lòng thử lại."),
@@ -37,14 +100,24 @@ export default function CreateTaskModal({
     });
   }
 
+  const submitting = createTask.isPending || uploading;
+
   return (
     <Modal open={open} onClose={onClose} title="Tạo công việc">
       <TaskForm
         submitLabel="Tạo công việc"
-        submitting={createTask.isPending}
+        submitting={submitting}
         error={error}
         onSubmit={handleSubmit}
-      />
+      >
+        <CreateTaskExtras
+          links={links}
+          onLinksChange={setLinks}
+          images={images}
+          onImagesChange={setImages}
+          disabled={submitting}
+        />
+      </TaskForm>
     </Modal>
   );
 }

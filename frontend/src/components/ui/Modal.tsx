@@ -85,7 +85,7 @@ export function Modal({
       />
       <div
         ref={panelRef}
-        className="relative z-10 w-full max-w-md rounded-card border border-line bg-card p-6 shadow-soft"
+        className="relative z-10 max-h-[85vh] w-full max-w-md overflow-y-auto rounded-card border border-line bg-card p-6 shadow-soft"
       >
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold tracking-tight">{title}</h2>

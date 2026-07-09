@@ -22,6 +22,9 @@ interface TaskFormProps {
   submitting: boolean;
   error: string | null;
   onSubmit: (payload: TaskPayload) => void;
+  // Extra fields rendered just above the submit button (e.g. create-time
+  // links/images). Edit mode leaves this empty.
+  children?: React.ReactNode;
 }
 
 export default function TaskForm({
@@ -30,6 +33,7 @@ export default function TaskForm({
   submitting,
   error,
   onSubmit,
+  children,
 }: TaskFormProps) {
   const { data: me } = useProfile();
   const isAdmin = me?.is_admin ?? false;
@@ -242,6 +246,8 @@ export default function TaskForm({
           )}
         </div>
       </div>
+
+      {children}
 
       {error && <p className="text-sm text-status-over">{error}</p>}
 
