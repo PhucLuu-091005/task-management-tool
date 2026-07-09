@@ -17,7 +17,9 @@ export function makeUser(): TestUser {
     username: `e2e${id}`,
     password: "Passw0rd!e2e",
     email: `e2e${id}@example.com`,
-    firstName: "E2E",
+    // Full name must be unique per user (backend unique_full_name constraint),
+    // so vary the given name by the same id used for username/email.
+    firstName: `E2E ${id}`,
     lastName: "Tester",
   };
 }

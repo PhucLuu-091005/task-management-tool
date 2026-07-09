@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models import Q
 
 from apps.teams.models import TeamMembership
 from apps.users.managers import UserManager
@@ -19,6 +20,17 @@ class User(AbstractUser):
 
     USERNAME_FIELD = "username"
     REQUIRED_FIELDS = ["email"]
+
+    class Meta(AbstractUser.Meta):
+        constraints = [
+            # A person's display name must be unique. Scoped to non-empty names so
+            # system/fixture accounts created without a name don't collide.
+            models.UniqueConstraint(
+                fields=["first_name", "last_name"],
+                condition=~Q(first_name="") & ~Q(last_name=""),
+                name="unique_full_name",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.email

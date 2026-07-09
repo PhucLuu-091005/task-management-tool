@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from apps.teams.models import Department, Team, TeamMembership
 from apps.users.constants import (
     EMAIL_UNIQUE_ERROR_MESSAGE,
+    FULL_NAME_UNIQUE_ERROR_MESSAGE,
     USERNAME_CONTENT_ERROR_MESSAGE,
     USERNAME_UNIQUE_ERROR_MESSAGE,
 )
@@ -77,6 +78,21 @@ def test_username_unique(valid_regis_payload):
     assert serializer.is_valid() is False
     assert "username" in serializer.errors
     assert USERNAME_UNIQUE_ERROR_MESSAGE in serializer.errors["username"]
+
+
+def test_full_name_unique(valid_regis_payload):
+    RegisterSerializer(data=valid_regis_payload).is_valid(raise_exception=True)
+    User.objects.create_user(**valid_regis_payload)
+    # Same first/last name, but fresh email + username so only the name collides.
+    serializer = RegisterSerializer(
+        data={
+            **valid_regis_payload,
+            "email": "testfullname@serializer.com",
+            "username": "testfullname",
+        }
+    )
+    assert serializer.is_valid() is False
+    assert FULL_NAME_UNIQUE_ERROR_MESSAGE in str(serializer.errors)
 
 
 # Test hide password from output

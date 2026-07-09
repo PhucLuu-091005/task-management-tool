@@ -3,11 +3,12 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError
 from rest_framework import serializers
-from rest_framework.validators import UniqueValidator
+from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
 from apps.teams.serializers import TeamMembershipSerializer
 from apps.users.constants import (
     EMAIL_UNIQUE_ERROR_MESSAGE,
+    FULL_NAME_UNIQUE_ERROR_MESSAGE,
     USERNAME_CONTENT_ERROR_MESSAGE,
     USERNAME_UNIQUE_ERROR_MESSAGE,
 )
@@ -87,6 +88,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["email", "username", "password", "first_name", "last_name"]
+        validators = [
+            UniqueTogetherValidator(
+                queryset=User.objects.all(),
+                fields=["first_name", "last_name"],
+                message=FULL_NAME_UNIQUE_ERROR_MESSAGE,
+            )
+        ]
 
     def validate_email(self, value: str) -> str:
         # Actual emails are case-insensitive, so we must protect against that
@@ -127,5 +135,7 @@ class RegisterSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"username": USERNAME_UNIQUE_ERROR_MESSAGE}
                 ) from exc
+            if "unique_full_name" in error_message:
+                raise serializers.ValidationError(FULL_NAME_UNIQUE_ERROR_MESSAGE) from exc
             # Any other error, pop up to report, do not hide it here
             raise
