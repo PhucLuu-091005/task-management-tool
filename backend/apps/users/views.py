@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import transaction
 from django.db.models import ProtectedError, prefetch_related_objects
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
@@ -15,9 +14,10 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from apps.tasks.models import Task
 from apps.users.constants import (
+    CANNOT_DELETE_ADMIN_ERROR_MESSAGE,
     CANNOT_DELETE_SELF_ERROR_MESSAGE,
-    LAST_ADMIN_ERROR_MESSAGE,
     REFRESH_COOKIE_MISSING_ERROR_MESSAGE,
     USER_ASSIGNED_TASKS_ERROR_MESSAGE,
     USER_HAS_TASKS_ERROR_MESSAGE,
@@ -58,46 +58,36 @@ class UserDetailView(DestroyAPIView):
     permission_classes = [IsAdmin]
 
     def destroy(self, request, *args, **kwargs):
-        from apps.tasks.models import Task
-
         instance = self.get_object()
         if instance.id == request.user.id:
             return Response(
                 {"detail": CANNOT_DELETE_SELF_ERROR_MESSAGE},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        with transaction.atomic():
-            # Lock the admin rows so two concurrent deletes can't each pass this
-            # check and drop the last admin, locking everyone out.
-            if instance.is_admin:
-                others_exist = (
-                    User.objects.filter(is_admin=True)
-                    .exclude(id=instance.id)
-                    .select_for_update()
-                    .exists()
-                )
-                if not others_exist:
-                    return Response(
-                        {"detail": LAST_ADMIN_ERROR_MESSAGE},
-                        status=status.HTTP_409_CONFLICT,
-                    )
-            # assignee_user is SET_NULL, so deleting a direct assignee would leave
-            # their tasks in an invalid "type=user, assignee=null" state that can't
-            # be edited afterwards. Block it (like created_by) so tasks stay valid.
-            if Task.objects.filter(assignee_user=instance).exists():
-                return Response(
-                    {"detail": USER_ASSIGNED_TASKS_ERROR_MESSAGE},
-                    status=status.HTTP_409_CONFLICT,
-                )
-            try:
-                instance.delete()
-            except ProtectedError:
-                # Task.created_by is PROTECT, so a creator can't be removed until
-                # their tasks are gone; report it instead of a raw 500.
-                return Response(
-                    {"detail": USER_HAS_TASKS_ERROR_MESSAGE},
-                    status=status.HTTP_409_CONFLICT,
-                )
+        # Admin accounts are undeletable through this endpoint; this also keeps at
+        # least one admin around (an admin can never remove another admin or self).
+        if instance.is_admin:
+            return Response(
+                {"detail": CANNOT_DELETE_ADMIN_ERROR_MESSAGE},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        # assignee_user is SET_NULL, so deleting a direct assignee would leave
+        # their tasks in an invalid "type=user, assignee=null" state that can't
+        # be edited afterwards. Block it (like created_by) so tasks stay valid.
+        if Task.objects.filter(assignee_user=instance).exists():
+            return Response(
+                {"detail": USER_ASSIGNED_TASKS_ERROR_MESSAGE},
+                status=status.HTTP_409_CONFLICT,
+            )
+        try:
+            instance.delete()
+        except ProtectedError:
+            # Task.created_by is PROTECT, so a creator can't be removed until
+            # their tasks are gone; report it instead of a raw 500.
+            return Response(
+                {"detail": USER_HAS_TASKS_ERROR_MESSAGE},
+                status=status.HTTP_409_CONFLICT,
+            )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

@@ -1,6 +1,7 @@
 import pytest
 from django.urls import reverse
 
+from apps.tasks.models import Task
 from apps.teams.models import Department, Team, TeamMembership
 
 pytestmark = pytest.mark.django_db
@@ -73,6 +74,22 @@ def test_admin_deletes_team(admin_client, team):
 def test_member_cannot_delete_team(member_client, team):
     res = member_client.delete(reverse("team-detail", args=[team.id]))
     assert res.status_code == 403
+
+
+def test_cannot_delete_team_with_assigned_tasks(admin_client, admin_user, team):
+    # assignee_team is SET_NULL, so deleting a team with assigned tasks would leave
+    # them in an invalid "type=team, assignee=null" state — block it instead.
+    Task.objects.create(
+        title="assigned",
+        assignee_type=Task.AssigneeType.TEAM,
+        assignee_team=team,
+        created_by=admin_user,
+    )
+
+    res = admin_client.delete(reverse("team-detail", args=[team.id]))
+
+    assert res.status_code == 409
+    assert Team.objects.filter(id=team.id).exists()
 
 
 # --- Member management ---
@@ -199,3 +216,28 @@ def test_admin_deletes_department(admin_client, department):
     res = admin_client.delete(reverse("department-detail", args=[department.id]))
     assert res.status_code == 204
     assert not Department.objects.filter(id=department.id).exists()
+
+
+def test_cannot_delete_department_with_assigned_tasks(admin_client, admin_user, department):
+    Task.objects.create(
+        title="assigned",
+        assignee_type=Task.AssigneeType.DEPARTMENT,
+        assignee_department=department,
+        created_by=admin_user,
+    )
+
+    res = admin_client.delete(reverse("department-detail", args=[department.id]))
+
+    assert res.status_code == 409
+    assert Department.objects.filter(id=department.id).exists()
+
+
+def test_cannot_delete_department_with_teams(admin_client, department):
+    # Team.department is PROTECT, so deleting a department that still owns teams
+    # must fail cleanly (409), not raise a raw ProtectedError (500).
+    Team.objects.create(name="Owned", department=department)
+
+    res = admin_client.delete(reverse("department-detail", args=[department.id]))
+
+    assert res.status_code == 409
+    assert Department.objects.filter(id=department.id).exists()

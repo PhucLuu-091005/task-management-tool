@@ -166,7 +166,7 @@ export default function AdminUsersPage() {
                   </p>
                 )}
               </div>
-              {profile && user.id !== profile.id && (
+              {profile && user.id !== profile.id && !user.is_admin && (
                 <Button
                   variant="danger"
                   size="sm"

@@ -33,6 +33,26 @@ def test_username_must_be_unique(user):
         )
 
 
+@pytest.mark.django_db
+def test_full_name_must_be_unique(user):
+    with pytest.raises(IntegrityError):
+        User.objects.create_user(
+            email="different@email.com",
+            username="different_user",
+            password="random123214@",
+            first_name=user.first_name,
+            last_name=user.last_name,
+        )
+
+
+@pytest.mark.django_db
+def test_empty_full_name_can_repeat():
+    # System/fixture accounts without a name are exempt from unique_full_name.
+    User.objects.create_user(email="a@example.com", username="a", password="random123214@")
+    User.objects.create_user(email="b@example.com", username="b", password="random123214@")
+    assert User.objects.filter(first_name="", last_name="").count() == 2
+
+
 # Global admin flag (A3)
 
 
