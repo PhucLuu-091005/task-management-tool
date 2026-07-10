@@ -33,9 +33,7 @@ class UserQuerySet(models.QuerySet):
         ).values_list("team_id", flat=True)
         dept_team_ids = Team.objects.filter(department__lead=user).values_list("id", flat=True)
         managed_team_ids = set(led_team_ids) | set(dept_team_ids)
-        return qs.filter(
-            Q(pk=user.pk) | Q(memberships__team_id__in=managed_team_ids)
-        ).distinct()
+        return qs.filter(Q(pk=user.pk) | Q(memberships__team_id__in=managed_team_ids)).distinct()
 
 
 # Inherit from DjangoUserManager to keep create_user/create_superuser, and use
