@@ -90,7 +90,7 @@ export default function CreateTaskExtras({
                   placeholder="Nhãn"
                   maxLength={200}
                   disabled={disabled}
-                  className={`${fieldInput} w-40`}
+                  className={`${fieldInput} shrink-0 basis-40`}
                 />
                 <button
                   type="button"
