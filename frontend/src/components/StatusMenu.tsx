@@ -30,12 +30,32 @@ export default function StatusMenu({
 }) {
   const updateStatus = useUpdateTaskStatus();
   const [open, setOpen] = useState(false);
+  // The menu renders inline, so an ancestor's overflow clips it: at the bottom of
+  // a list it must open upward instead of down. Decided from viewport space on open.
+  const [placement, setPlacement] = useState<"down" | "up">("down");
   const [pending, setPending] = useState<TaskStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const next = ALLOWED_NEXT_STATUS[task.status];
   const locked = next.length === 0;
+
+  function toggle() {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    const trigger = triggerRef.current;
+    if (trigger) {
+      const rect = trigger.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      // Rough menu height: one row per option (~2rem) plus the wrapper padding.
+      const estimatedHeight = next.length * 32 + 16;
+      setPlacement(spaceBelow < estimatedHeight ? "up" : "down");
+    }
+    setOpen(true);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -82,6 +102,7 @@ export default function StatusMenu({
   return (
     <div ref={ref} className="relative flex flex-col items-end gap-1">
       <button
+        ref={triggerRef}
         type="button"
         disabled={updateStatus.isPending}
         aria-haspopup="menu"
@@ -90,7 +111,7 @@ export default function StatusMenu({
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
-          setOpen((v) => !v);
+          toggle();
         }}
         className={cn(
           pill,
@@ -107,7 +128,8 @@ export default function StatusMenu({
         <div
           role="menu"
           className={cn(
-            "absolute top-full z-40 mt-1 min-w-[9rem] overflow-hidden rounded-ctrl border border-line bg-card py-1 shadow-soft",
+            "absolute z-40 min-w-[9rem] overflow-hidden rounded-ctrl border border-line bg-card py-1 shadow-soft",
+            placement === "up" ? "bottom-full mb-1" : "top-full mt-1",
             align === "end" ? "right-0" : "left-0",
           )}
         >

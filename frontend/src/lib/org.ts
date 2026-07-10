@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Department, Team, User } from "@/lib/types";
 
-// These list endpoints are admin-only; non-admins build choices from their own profile.
+// /teams/ and /departments/ stay admin-only, so non-admins build those choices
+// from their own profile. /users/ is scoped server-side instead: admins get
+// everyone, team/department leads get the members they're allowed to assign.
 export function useUsers(enabled: boolean) {
   return useQuery<User[]>({
     queryKey: ["users"],

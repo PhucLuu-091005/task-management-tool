@@ -147,7 +147,8 @@ def test_admin_lists_users_with_memberships(
 
 
 @pytest.mark.django_db
-def test_user_list_requires_admin(auth_client, user_list_url):
+def test_user_list_forbidden_without_assign_rights(auth_client, user_list_url):
+    # A user who leads no team/department has nobody to assign, so listing is denied.
     res = auth_client.get(user_list_url)
     assert res.status_code == 403
 

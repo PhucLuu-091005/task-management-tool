@@ -25,6 +25,16 @@ class IsAdmin(BasePermission):
         return self.has_permission(request, view)
 
 
+class CanListUsers(BasePermission):
+    """Admins and anyone who can assign tasks (team leaders, department leads) may
+    list users; the view's queryset then scopes non-admins to the people they can
+    actually assign. A plain member has no one to assign, so they're denied here."""
+
+    def has_permission(self, request, view) -> bool:
+        user = request.user
+        return bool(user and user.is_authenticated and getattr(user, "can_create_tasks", False))
+
+
 class IsTeamLeader(BasePermission):
     def has_permission(self, request, view) -> bool:
         user = request.user

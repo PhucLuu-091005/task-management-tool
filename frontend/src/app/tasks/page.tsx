@@ -255,7 +255,7 @@ export default function TasksPage() {
             Không có công việc nào.
           </Card>
         ) : (
-          <Card className="divide-y divide-line overflow-hidden">
+          <Card className="divide-y divide-line">
             {data.results.map((task) => (
               <div
                 key={task.id}
@@ -274,7 +274,7 @@ export default function TasksPage() {
                   </p>
                 </div>
                 {task.is_overdue && task.status !== "overdue" && (
-                  <span className="rounded-md bg-status-overbg px-1.5 py-0.5 text-xs font-medium text-status-over">
+                  <span className="whitespace-nowrap rounded-md bg-status-overbg px-1.5 py-0.5 text-xs font-medium text-status-over">
                     Trễ hạn
                   </span>
                 )}

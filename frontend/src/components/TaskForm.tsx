@@ -37,7 +37,10 @@ export default function TaskForm({
 }: TaskFormProps) {
   const { data: me } = useProfile();
   const isAdmin = me?.is_admin ?? false;
-  const { data: users } = useUsers(isAdmin);
+  // Leads may assign to their people too; /users/ scopes the list server-side.
+  // Team/department lists stay admin-only, seeded from the profile for leads.
+  const canAssign = me?.can_create_tasks ?? false;
+  const { data: users } = useUsers(canAssign);
   const { data: teams } = useTeams(isAdmin);
   const { data: departments } = useDepartments(isAdmin);
 
@@ -58,8 +61,9 @@ export default function TaskForm({
     initial?.assignee_department?.toString() ?? "",
   );
 
-  // Non-admins can't list users/teams/departments; offer themselves and their
-  // teams, plus the task's current assignee so editing never forces a reassignment.
+  // Non-leads can't list teams/departments; offer their own teams, plus the task's
+  // current assignee so editing never forces a reassignment. The user list is
+  // server-scoped, so leads get their assignable members from `users` directly.
   function seedInitial(
     choices: { id: number; label: string }[],
     id: number | null | undefined,
@@ -70,7 +74,7 @@ export default function TaskForm({
   }
 
   const userChoices = seedInitial(
-    isAdmin
+    canAssign
       ? (users ?? []).map((u) => ({
           id: u.id,
           label: `${u.last_name} ${u.first_name}`.trim() || u.username,

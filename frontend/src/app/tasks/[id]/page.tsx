@@ -40,12 +40,14 @@ function InfoCard({ task }: { task: Task }) {
         <MetaRow label="Người tạo">{task.created_by_name}</MetaRow>
         <MetaRow label="Độ ưu tiên">{priorityLabel(task.priority)}</MetaRow>
         <MetaRow label="Hạn hoàn thành">
-          {formatDateTime(task.due_date)}
-          {task.is_overdue && (
-            <span className="ml-2 rounded-md bg-status-overbg px-1.5 py-0.5 text-xs font-medium text-status-over">
-              Trễ hạn
-            </span>
-          )}
+          <span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+            <span className="whitespace-nowrap">{formatDateTime(task.due_date)}</span>
+            {task.is_overdue && (
+              <span className="whitespace-nowrap rounded-md bg-status-overbg px-1.5 py-0.5 text-xs font-medium text-status-over">
+                Trễ hạn
+              </span>
+            )}
+          </span>
         </MetaRow>
         <MetaRow label="Giao lúc">{formatDateTime(task.assigned_at)}</MetaRow>
         {task.started_at && (
