@@ -10,9 +10,19 @@ def client():
     return APIClient()
 
 
-def test_docs_are_open_in_development(client):
+def test_docs_are_public(client):
+    # Schema and Swagger UI serve to anonymous users in every environment.
     assert client.get("/api/schema/").status_code == 200
     assert client.get("/api/docs/").status_code == 200
+
+
+def test_docs_serve_permission_is_public_by_default():
+    # Guards the base default so production (which inherits base) stays public too.
+    from django.conf import settings
+
+    assert settings.SPECTACULAR_SETTINGS["SERVE_PERMISSIONS"] == [
+        "rest_framework.permissions.AllowAny"
+    ]
 
 
 def test_schema_documents_task_crud_and_stats():
