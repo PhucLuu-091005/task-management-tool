@@ -15,6 +15,31 @@ import {
   useUploadAttachment,
 } from "@/lib/attachments";
 
+// Force a download of the attachment. Same-origin media (/media/* via the dev
+// proxy) downloads directly; a cross-origin S3 URL that blocks the fetch falls
+// back to opening in a new tab.
+async function downloadAttachment(url: string, name: string) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(String(res.status));
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+}
+
+function attachmentFileName(url: string): string {
+  return url.split("?")[0].split("/").pop() || "dinh-kem";
+}
+
 export default function TaskAttachments({
   taskId,
   canManage,
@@ -72,13 +97,23 @@ export default function TaskAttachments({
         <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
           {attachments.map((att) => (
             <li key={att.id} className="group relative">
-              {/* eslint-disable-next-line @next/next/no-img-element -- backend
-                  returns signed S3 / dev media URLs, not statically known paths */}
-              <img
-                src={att.image}
-                alt={att.caption || "Đính kèm"}
-                className="aspect-square w-full rounded-ctrl border border-line object-cover"
-              />
+              <button
+                type="button"
+                onClick={() => {
+                  void downloadAttachment(att.image, attachmentFileName(att.image));
+                }}
+                className="block w-full cursor-pointer"
+                title="Tải ảnh về"
+                aria-label={att.caption ? `Tải ảnh về: ${att.caption}` : "Tải ảnh về"}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- backend
+                    returns signed S3 / dev media URLs, not statically known paths */}
+                <img
+                  src={att.image}
+                  alt={att.caption || "Đính kèm"}
+                  className="aspect-square w-full rounded-ctrl border border-line object-cover transition group-hover:opacity-95"
+                />
+              </button>
               {att.caption && (
                 <p className="mt-1 truncate text-xs text-muted">{att.caption}</p>
               )}
