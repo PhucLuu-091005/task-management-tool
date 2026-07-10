@@ -24,7 +24,7 @@ from apps.users.constants import (
 )
 from apps.users.cookies import delete_refresh_cookie, set_refresh_cookie
 from apps.users.managers import PROFILE_PREFETCHES
-from apps.users.permissions import IsAdmin
+from apps.users.permissions import CanListUsers, IsAdmin
 from apps.users.serializers import (
     AvatarUpdateSerializer,
     RegisterSerializer,
@@ -47,9 +47,11 @@ class RegisterView(CreateAPIView):
 
 
 class UserListView(ListAPIView):
-    queryset = User.objects.with_memberships()
     serializer_class = UserSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = [CanListUsers]
+
+    def get_queryset(self):
+        return User.objects.assignable_by(self.request.user)
 
 
 class UserDetailView(DestroyAPIView):
